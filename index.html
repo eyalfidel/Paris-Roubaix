@@ -692,22 +692,52 @@ function windDirLabel(deg) {
 
 async function fetchPointWeather(ptIdx) {
   const [km, lat, lon] = WEATHER_POINTS[ptIdx];
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code,precipitation_probability&timezone=Europe%2FParis&start_date=2026-04-11&end_date=2026-04-13`;
+  
+  // 1. בודקים כמה ימים נשארו מהיום ועד המרוץ
+  const today = new Date();
+  const raceDate = new Date('2026-04-12');
+  const diffDays = Math.ceil((raceDate - today) / (1000 * 60 * 60 * 24));
+  
+  // 2. אם אנחנו במרחק של שבוע או פחות, אפשר לבקש את אחוזי המשקעים!
+  const canGetProb = diffDays <= 7;
+  let hourlyParams = 'temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code';
+  if (canGetProb) {
+    hourlyParams += ',precipitation_probability';
+  }
+
+  // 3. מבקשים את ה-11 (לחישוב בוץ) ואת ה-12 (יום המרוץ עצמו)
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${hourlyParams}&timezone=Europe%2FParis&start_date=2026-04-11&end_date=2026-04-12`;
+  
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const data = await resp.json();
   const byHour = {};
-  const prevDayPrecip = [];
-  data.hourly.time.forEach((t, i) => {
-    if (t.startsWith('2026-04-12')) {
-      const h = parseInt(t.slice(11, 13));
-      byHour[h] = { temp: data.hourly.temperature_2m[i], precip: data.hourly.precipitation[i], wind: data.hourly.wind_speed_10m[i], wdir: data.hourly.wind_direction_10m[i], wcode: data.hourly.weather_code[i], pprob: data.hourly.precipitation_probability[i] };
-    }
-    if (t.startsWith('2026-04-11') && data.hourly.precipitation[i] != null) prevDayPrecip.push(data.hourly.precipitation[i]);
-  });
-  weatherCache[ptIdx] = { byHour, prevDayTotal: prevDayPrecip.reduce((a, b) => a + b, 0) };
-}
+  let prevDayPrecip = 0;
 
+  data.hourly.time.forEach((t, i) => {
+     // נתוני מזג האוויר ביום המרוץ
+     if (t.startsWith('2026-04-12')) {
+         const h = parseInt(t.slice(11, 13));
+         byHour[h] = {
+            temp: data.hourly.temperature_2m[i],
+            precip: data.hourly.precipitation[i],
+            wind: data.hourly.wind_speed_10m[i],
+            wdir: data.hourly.wind_direction_10m[i],
+            wcode: data.hourly.weather_code[i],
+            // מזינים את אחוזי המשקעים רק אם הם קיימים
+            pprob: (canGetProb && data.hourly.precipitation_probability) ? data.hourly.precipitation_probability[i] : 0
+         };
+     } 
+     // סוכמים את כל הגשם של יום לפני (11 באפריל) כדי לדעת אם יהיה בוצי!
+     else if (t.startsWith('2026-04-11')) {
+         if (data.hourly.precipitation[i]) {
+             prevDayPrecip += data.hourly.precipitation[i];
+         }
+     }
+  });
+  
+  weatherCache[ptIdx] = { byHour, prevDayTotal: prevDayPrecip };
+}
 function getRealWeather(km, timeStr) {
   if (!weatherLoaded) return null;
   let lo = 0, hi = WEATHER_POINTS.length - 1;
