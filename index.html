@@ -726,17 +726,25 @@
   }
 
 
-  /* === MUD COMMENTARY === */
+ /* === MUD COMMENTARY === */
   .mud-commentary {
     margin-top: 1rem;
     padding: 0.9rem 1.2rem;
-    background: rgba(61, 47, 30, 0.5);
-    border-left: 3px solid var(--pave);
     border-radius: 0 3px 3px 0;
-    display: none;
-    animation: fadeInUp 0.4s ease forwards;
+    height: 8rem; /* שומר על גובה קבוע מראש שלא דוחף את שאר האתר */
+    background: transparent;
+    border-left: 3px solid transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, background 0.3s ease, border-left-color 0.3s ease;
+    overflow: hidden;
   }
-  .mud-commentary.visible { display: block; }
+  .mud-commentary.visible {
+    background: rgba(61, 47, 30, 0.5);
+    border-left-color: var(--pave);
+    opacity: 1;
+    visibility: visible;
+  }
   .mud-commentary-label {
     font-family: 'DM Mono', monospace;
     font-size: 0.6rem;
@@ -752,7 +760,6 @@
     line-height: 1.5;
   }
   .mud-commentary-text strong { color: var(--pave-light); font-weight: 600; }
-
   /* === WEATHER STATUS STATES === */
   .weather-card.loading { opacity: 0.5; }
   .weather-status-bar {
