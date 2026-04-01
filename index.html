@@ -819,7 +819,8 @@
 </header>
 
 <!-- HELL METER -->
-<div class="hell-meter-card">
+<div class="hell-meter-wrap">
+  <div class="hell-meter-card">
     <div>
       <div class="hell-label">Hell of the North Index</div>
       <div class="hell-verdict" id="hell-verdict">LOADING...</div>
@@ -842,6 +843,7 @@
       <div id="hell-summary-2" style="font-size:0.8rem; color:var(--gravel); margin-top:0.2rem"></div>
     </div>
   </div>
+</div>
 
 <!-- KEY POINTS -->
 <div class="key-points-wrap">
@@ -1605,13 +1607,6 @@ setSlider = function(km) {
   wTime.textContent = w.time;
 
   const rw = (w._rw) || null;
-  // not sure what these 4 rows do
-  //const hellIdx = (weatherLoaded && rw) ? computeHellIndex(rw) : 72;
-  //document.getElementById('hell-fill').style.width = hellIdx + '%';
-  //const v = hellVerdict(hellIdx);
-  //const verdictEl = document.getElementById('hell-verdict');
-  verdictEl.textContent = v.text;
-  verdictEl.className = 'hell-verdict ' + v.cls;
 
   const commentary = document.getElementById('mud-commentary');
   const mudText = document.getElementById('mud-text');
@@ -1755,9 +1750,8 @@ leafletJS.onload = function() {
       else inner.classList.remove('in-pave');
     }
     
-    // מעקב רציף! המפה תמיד ממורכזת על הרוכב
+   // מעקב רציף! המפה תמיד ממורכזת על הרוכב
     window.raceMap.panTo(pos, { animate: true, duration: 0.1 });
-  };
   };
 };
 
