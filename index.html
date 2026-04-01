@@ -1398,10 +1398,12 @@ async function fetchPointWeather(ptIdx) {
   const [km, lat, lon] = WEATHER_POINTS[ptIdx];
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code,precipitation_probability` +
-    `&timezone=Europe%2FParis&start_date=2026-04-11&end_date=2026-04-13`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const data = await resp.json();
+    `&timezone=Europe%2FParis&forecast_days=16`;
+const resp = await fetch(url);
+if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+const data = await resp.json();
+// Explicit check for Open-Meteo API-level errors (returns HTTP 200 but with error field)
+if (data.error) throw new Error(`API error: ${data.reason}`);
   const times = data.hourly.time;
   const temps  = data.hourly.temperature_2m;
   const precip = data.hourly.precipitation;
