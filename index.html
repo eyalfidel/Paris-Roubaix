@@ -1731,14 +1731,58 @@ leafletJS.onload = function() {
       .bindTooltip(km.name, { className: 'leaflet-tooltip', permanent: false, direction: 'top' });
   });
 
-  // Rider position dot
+ // Rider position dot
   const riderIcon = L.divIcon({
     html: '<div class="map-rider-dot" id="map-rider-inner"></div>',
     className: '',
     iconSize: [14,14],
     iconAnchor: [7,7],
   });
-  const riderMarker = L.marker(GPX_COORDS[0], { icon: riderIcon, zIndexOffset: 1000 }).addTo(window.raceMap);
+  
+  // הוספנו draggable: true כדי לאפשר גרירה של הרוכב
+  const riderMarker = L.marker(GPX_COORDS[0], { 
+    icon: riderIcon, 
+    zIndexOffset: 1000,
+    draggable: true 
+  }).addTo(window.raceMap);
+
+  let isMarkerDragging = false;
+
+  // כשמתחילים לגרור
+  riderMarker.on('dragstart', function() {
+    isMarkerDragging = true;
+  });
+
+  // תוך כדי גרירה - מחשבים את הנקודה הקרובה ביותר על המסלול
+  riderMarker.on('drag', function(e) {
+    const latlng = e.latlng;
+    let bestIdx = 0;
+    let minDist = Infinity;
+    
+    // סריקה מהירה של המסלול למציאת הנקודה הקרובה ביותר לסמן
+    for (let i = 0; i < TOTAL_POINTS; i++) {
+      const pt = GPX_COORDS[i];
+      const d = Math.pow(pt[0] - latlng.lat, 2) + Math.pow(pt[1] - latlng.lng, 2);
+      if (d < minDist) {
+        minDist = d;
+        bestIdx = i;
+      }
+    }
+    
+    // המרת אינדקס הנקודה לקילומטרים ועדכון כל האתר דרך setSlider
+    const frac = bestIdx / (TOTAL_POINTS - 1);
+    const draggedKm = frac * TOTAL_KM;
+    setSlider(draggedKm);
+  });
+
+  // כשעוזבים את העכבר - "ממגנטים" את הסמן חזרה למסלול המדויק
+  riderMarker.on('dragend', function() {
+    isMarkerDragging = false;
+    const frac = currentKm / TOTAL_KM;
+    const idx = Math.min(Math.floor(frac * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+    riderMarker.setLatLng(GPX_COORDS[idx]);
+    window.raceMap.panTo(GPX_COORDS[idx], { animate: true, duration: 0.2 });
+  });
 
   // Update rider on slider change
   window.updateMapRider = function(km, inPave) {
@@ -1746,7 +1790,10 @@ leafletJS.onload = function() {
     const idx = Math.min(Math.floor(frac * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
     const pos = GPX_COORDS[idx];
     
-    riderMarker.setLatLng(pos);
+    // מעדכנים את המיקום פיזית רק אם המשתמש *לא* גורר כרגע בעצמו (למניעת ריצודים)
+    if (!isMarkerDragging) {
+      riderMarker.setLatLng(pos);
+    }
     
     const inner = document.getElementById('map-rider-inner');
     if (inner) {
@@ -1754,10 +1801,12 @@ leafletJS.onload = function() {
       else inner.classList.remove('in-pave');
     }
     
-   // מעקב רציף! המפה תמיד ממורכזת על הרוכב
-    window.raceMap.panTo(pos, { animate: true, duration: 0.1 });
+    // ממרכזים את המפה רק אם לא גוררים כרגע
+    if (!isMarkerDragging) {
+      window.raceMap.panTo(pos, { animate: true, duration: 0.1 });
+    }
   };
-};
+}; // <--- שים לב שזה הסוגר הנכון שסוגר את leafletJS.onload
 
 </script>
 </body>
