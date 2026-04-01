@@ -19,9 +19,9 @@
 <meta property="og:description" content="L'Enfer du Nord awaits. Explore the interactive map, track the 30 pavé sectors, and check the live mud & weather forecast for race day.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://parisroubaix.eyalfidel.com/">
-<meta property="og:image" content="https://images.unsplash.com/photo-1554995207-c18c203602cb?q=80&w=1200&auto=format&fit=crop">
+<meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/3/36/The_peloton_through_Trou%C3%A9e_d%27Arenberg%2C_Paris-Roubaix_2008.jpg">
 
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/3/36/The_peloton_through_Trou%C3%A9e_d%27Arenberg%2C_Paris-Roubaix_2008.jpg">
 <meta name="twitter:title" content="Paris-Roubaix 2026 | Live Weather Tracker">
 <meta name="twitter:description" content="Explore the interactive map, track the 30 pavé sectors, and check the live mud & weather forecast for race day.">
 <meta name="twitter:image" content="https://images.unsplash.com/photo-1554995207-c18c203602cb?q=80&w=1200&auto=format&fit=crop">
@@ -169,8 +169,9 @@
   /* === HELL METER === */
   .hell-meter-wrap {
     max-width: 1100px;
-    margin: 2rem auto 4rem auto; /* שינינו את הרווח התחתון ל-4 כדי להרחיק אותו מנקודות המפתח */
-    padding: 0 2rem;
+    margin: 2rem auto 5rem auto; /* רווח גדול של 5rem למטה */
+    padding: 0 2rem 5rem 2rem;
+    border-bottom: 1px solid rgba(196, 170, 140, 0.08); /* קו מפריד עדין מאוד */
   }
 
   .hell-meter-card {
@@ -662,7 +663,8 @@
   ::-webkit-scrollbar-track { background: var(--stone); }
   ::-webkit-scrollbar-thumb { background: var(--mud); border-radius: 3px; }
 
-  /* === MAP === */
+ 
+ /* === MAP === */
   .map-section {
     max-width: 1100px;
     margin: 0 auto 2rem;
@@ -671,46 +673,55 @@
 
   #route-map {
     width: 100%;
-    height: 420px;
-    border-radius: 3px;
-    border: 1px solid rgba(196, 170, 140, 0.15);
+    height: 480px; /* הגדלנו קצת את גובה המפה */
+    border-radius: 4px;
+    border: 1px solid rgba(196, 170, 140, 0.2);
     background: #1a1714;
     position: relative;
     z-index: 0;
   }
 
-  /* Leaflet dark overrides */
   .leaflet-container {
     background: #1a1714 !important;
     font-family: 'DM Mono', monospace !important;
   }
-  .leaflet-tile { filter: brightness(0.55) saturate(0.4) hue-rotate(180deg); }
+  
+  /* הסרנו את הפילטר המכוער שהיה כאן קודם! */
+  
   .leaflet-control-zoom a {
-    background: #2c2420 !important;
+    background: rgba(44, 36, 32, 0.9) !important;
     color: var(--cream) !important;
     border-color: rgba(196,170,140,0.2) !important;
   }
+  
   .leaflet-control-attribution {
     background: rgba(26,23,20,0.8) !important;
     color: var(--dust) !important;
     font-size: 0.55rem !important;
   }
+  
+  /* סמן הרוכב החדש והזורח */
   .map-rider-dot {
-    width: 14px; height: 14px;
-    background: var(--rain);
-    border: 2px solid white;
+    width: 16px; height: 16px;
+    background: var(--white);
+    border: 3px solid var(--rain);
     border-radius: 50%;
-    box-shadow: 0 0 8px rgba(122,179,200,0.8);
-    transition: left 0.1s, top 0.1s;
+    box-shadow: 0 0 12px rgba(122,179,200,0.9);
+    transition: all 0.2s;
   }
+  
   .map-rider-dot.in-pave {
-    background: var(--pave-light);
-    box-shadow: 0 0 10px rgba(240,131,74,0.9);
+    background: var(--yellow);
+    border-color: var(--pave);
+    box-shadow: 0 0 15px rgba(240,131,74,1);
+    transform: scale(1.2);
   }
+  
   .map-key-marker {
-    width: 10px; height: 10px;
+    width: 12px; height: 12px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.6);
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
     cursor: pointer;
   }
 
@@ -1101,11 +1112,11 @@ function getActivePave(km) {
 
 // ===================== RENDER KEY POINTS =====================
 const KEY_POINTS = [
-  { name: "Compiègne",          type: "start",  km: 0.0,   sub: "Neutral start zone", icon: "🏁" },
-  { name: "Trouée d'Arenberg",  type: "pave",   km: 163.0, sub: "Sector 19 · 2331m",  icon: "💀" },
-  { name: "Mons-en-Pévèle",     type: "pave",   km: 209.7, sub: "Sector 11 · 2998m",  icon: "⚡" },
-  { name: "Carrefour de l'Arbre", type: "pave", km: 241.2, sub: "Sector 4 · 2109m",   icon: "🌳" },
-  { name: "Roubaix",            type: "finish", km: 258.3, sub: "Vélodrome finish",    icon: "🏆" },
+  { name: "Compiègne",          type: "start",  km: 0.0,   sub: "Neutral start zone", icon: "🏁", stars: 0 },
+  { name: "Trouée d'Arenberg",  type: "pave",   km: 163.0, sub: "Sector 19 · 2331m",  icon: "💀", stars: 5 },
+  { name: "Mons-en-Pévèle",     type: "pave",   km: 209.7, sub: "Sector 11 · 2998m",  icon: "⚡", stars: 5 },
+  { name: "Carrefour de l'Arbre", type: "pave", km: 241.2, sub: "Sector 4 · 2109m",   icon: "🌳", stars: 5 },
+  { name: "Roubaix",            type: "finish", km: 258.3, sub: "Vélodrome finish",    icon: "🏆", stars: 0 },
 ];
 
 const keyGrid = document.getElementById('key-points-grid');
@@ -1115,11 +1126,12 @@ KEY_POINTS.forEach(kp => {
   card.className = `key-card ${kp.type}`;
   card.innerHTML = `
     <div class="key-card-name">${kp.icon} ${kp.name}</div>
+    ${kp.stars > 0 ? `<div style="color:var(--yellow); font-size: 0.8rem; margin: 4px 0;">${'★'.repeat(kp.stars)}</div>` : ''}
     <div class="key-card-sub">${kp.sub}</div>
     <div class="key-card-km">KM ${kp.km.toFixed(1)} · ${getTimeAt(kp.km)}</div>
     <div class="key-card-weather"><span class="weather-icon">${w.icon}</span> ${w.main} · ${w.temp}</div>
   `;
-  card.addEventListener('click', () => setSlider(kp.km));
+  card.addEventListener('click', () => { setSlider(kp.km); window.raceMap.setZoom(13); });
   keyGrid.appendChild(card);
 });
 
@@ -1142,7 +1154,7 @@ sectorWaypoints.forEach(wp => {
       <div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div>
     </div>
   `;
-  row.addEventListener('click', () => setSlider(wp.km));
+  row.addEventListener('click', () => { setSlider(wp.km); window.raceMap.setZoom(14); });
   sectorsGrid.appendChild(row);
 });
 
@@ -1566,7 +1578,7 @@ setSlider = function(km) {
   timeDisplayEl.textContent = wp.time;
   const pave = getActivePave(km);
   if (pave) {
-    paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 ${'★'.repeat(pave.stars)}`;
+   paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 ${'★'.repeat(pave.stars)}`;
     paveBadgeEl.classList.add('visible');
     thumb.classList.add('in-pave');
     triggerMudEffect();
@@ -1627,24 +1639,25 @@ leafletJS.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.mi
 document.head.appendChild(leafletJS);
 
 leafletJS.onload = function() {
-  const map = L.map('route-map', {
+  window.raceMap = L.map('route-map', {
     center: [50.05, 3.05],
     zoom: 9,
     zoomControl: true,
     attributionControl: true,
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 17,
-  }).addTo(map);
+  // מפת בייס כהה ומקצועית של CartoDB
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 18,
+  }).addTo(window.raceMap);
 
-  // Draw route polyline
+  // ציור המסלול הראשי (עבה ובולט יותר)
   const routeLine = L.polyline(GPX_COORDS, {
-    color: 'rgba(122,179,200,0.7)',
-    weight: 3,
-    opacity: 1,
-  }).addTo(map);
+    color: '#7ab3c8',
+    weight: 4,
+    opacity: 0.8,
+  }).addTo(window.raceMap);
 
   // Draw pave sectors in orange
   const paveSectorCoords = [
@@ -1724,16 +1737,18 @@ leafletJS.onload = function() {
     const frac = km / 258.3;
     const idx = Math.min(Math.floor(frac * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
     const pos = GPX_COORDS[idx];
+    
     riderMarker.setLatLng(pos);
+    
     const inner = document.getElementById('map-rider-inner');
     if (inner) {
       if (inPave) inner.classList.add('in-pave');
       else inner.classList.remove('in-pave');
     }
-    // Pan map to keep rider visible if out of view
-    if (!map.getBounds().contains(pos)) {
-      map.panTo(pos, { animate: true, duration: 0.5 });
-    }
+    
+    // מעקב רציף! המפה תמיד ממורכזת על הרוכב
+    window.raceMap.panTo(pos, { animate: true, duration: 0.1 });
+  };
   };
 };
 
