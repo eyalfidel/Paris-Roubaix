@@ -1427,21 +1427,21 @@ if (data.error) throw new Error(`API error: ${data.reason}`);
 async function loadAllWeather() {
   const dot = document.getElementById('weather-dot');
   const statusText = document.getElementById('weather-status-text');
-  dot.className = 'weather-status-dot loading';
-  statusText.textContent = 'Fetching live forecast for April 12\u2026';
+  if(dot) dot.className = 'weather-status-dot loading';
+  if(statusText) statusText.textContent = 'Fetching live forecast for April 12\u2026';
+  
   try {
     await Promise.all(WEATHER_POINTS.map((_, i) => fetchPointWeather(i)));
     weatherLoaded = true;
-    dot.className = 'weather-status-dot';
-    statusText.textContent = 'Live forecast \u00b7 Open-Meteo \u00b7 April 12, 2026';
+    if(dot) dot.className = 'weather-status-dot';
+    if(statusText) statusText.textContent = 'Live forecast \u00b7 Open-Meteo \u00b7 April 12, 2026';
 
-    // חישוב המדד הכללי ליום המרוץ
     let maxHell = 0;
     let maxRain = 0;
     let maxWind = 0;
 
     WEATHER_POINTS.forEach(pt => {
-      const rw = getRealWeather(pt[0], "14:00"); // בדיקת אמצע היום
+      const rw = getRealWeather(pt[0], "14:00");
       if (rw) {
          const currentHell = computeHellIndex(rw);
          if (currentHell > maxHell) maxHell = currentHell;
@@ -1450,43 +1450,54 @@ async function loadAllWeather() {
       }
     });
 
-    // עדכון ה-UI של הבר הראשי
-    document.getElementById('hell-fill').style.width = maxHell + '%';
+    const hellFill = document.getElementById('hell-fill');
+    if(hellFill) hellFill.style.width = maxHell + '%';
+    
     const v = hellVerdict(maxHell);
     const verdictEl = document.getElementById('hell-verdict');
-    verdictEl.textContent = v.text;
-    verdictEl.className = 'hell-verdict ' + v.cls;
+    if(verdictEl) {
+      verdictEl.textContent = v.text;
+      verdictEl.className = 'hell-verdict ' + v.cls;
+    }
 
     const summary1 = document.getElementById('hell-summary-1');
     const summary2 = document.getElementById('hell-summary-2');
-    if (maxRain > 0.5) {
-        summary1.textContent = '🌧️ Rain expected on route';
-        summary2.textContent = '💧 Slippery cobbles alert';
-    } else if (maxWind > 20) {
-        summary1.textContent = '💨 High winds expected';
-        summary2.textContent = '🌪️ Crosswinds in open sectors';
-    } else {
-        summary1.textContent = '☀️ Dry race expected';
-        summary2.textContent = '💨 Fast & dusty cobbles';
+    if(summary1 && summary2) {
+      if (maxRain > 0.5) {
+          summary1.textContent = '🌧️ Rain expected on route';
+          summary2.textContent = '💧 Slippery cobbles alert';
+      } else if (maxWind > 20) {
+          summary1.textContent = '💨 High winds expected';
+          summary2.textContent = '🌪️ Crosswinds in open sectors';
+      } else {
+          summary1.textContent = '☀️ Dry race expected';
+          summary2.textContent = '💨 Fast & dusty cobbles';
+      }
     }
 
-    // ציור מחדש של האתר עם נתוני האמת
-    renderKeyPoints();
-    renderSectors();
-    setSlider(currentKm);
-    
+    // ציור הרשימות מחדש עם נתוני אמת!
+    if (typeof renderKeyPoints === 'function') renderKeyPoints();
+    if (typeof renderSectors === 'function') renderSectors();
+    if (typeof setSlider === 'function') setSlider(currentKm);
+
  } catch (e) {
     weatherError = true;
-    dot.className = 'weather-status-dot error';
-    statusText.textContent = 'Forecast unavailable \u2014 showing simulated data';
+    if(dot) dot.className = 'weather-status-dot error';
+    if(statusText) statusText.textContent = 'Forecast unavailable \u2014 showing simulated data';
     
-    // מונע היתקעות במצב LOADING אם התחזית קורסת
-    document.getElementById('hell-fill').style.width = '72%';
+    const hellFill = document.getElementById('hell-fill');
+    if(hellFill) hellFill.style.width = '72%';
+    
     const verdictEl = document.getElementById('hell-verdict');
-    verdictEl.textContent = 'MUDDY & EPIC';
-    verdictEl.className = 'hell-verdict muddy';
-    document.getElementById('hell-summary-1').textContent = '🌧️ Rain during race (Simulated)';
-    document.getElementById('hell-summary-2').textContent = '💧 Wet cobbles expected';
+    if(verdictEl) {
+      verdictEl.textContent = 'MUDDY & EPIC';
+      verdictEl.className = 'hell-verdict muddy';
+    }
+    
+    const summary1 = document.getElementById('hell-summary-1');
+    const summary2 = document.getElementById('hell-summary-2');
+    if(summary1) summary1.textContent = '🌧️ Rain during race (Simulated)';
+    if(summary2) summary2.textContent = '💧 Wet cobbles expected';
     
     console.warn('Weather fetch failed:', e);
   }
@@ -1574,14 +1585,16 @@ function getWeatherForDisplay(km) {
     if (rw) {
       const { icon, label } = wmoToLabel(rw.wcode);
       const pave = getActivePave(km);
-     let desc = '';
-      const isSnow = [71,73,75,77,85,86].includes(rw.wcode); // קודי WMO של שלג
+      let desc = '';
+      const isSnow = [71,73,75,77,85,86].includes(rw.wcode); // זיהוי שלג ודאי
+      
       if (isSnow) desc = 'Freezing conditions \u2014 snow on the cobbles!';
       else if ((rw.precip || 0) > 2) desc = 'Heavy rain \u2014 wet cobbles, high crash risk';
       else if ((rw.precip || 0) > 0.5) desc = 'Rain \u2014 surfaces slippery, take care on pav\u00e9';
       else if ((rw.precip || 0) > 0.1) desc = 'Light drizzle \u2014 cobbles getting damp';
       else if ((rw.pprob || 0) > 50) desc = `Rain likely (${Math.round(rw.pprob)}% chance)`;
       else desc = pave ? 'Dry cobbles \u2014 faster but still punishing' : label + ' conditions along this section';
+      
       return {
         icon, main: label, desc,
         temp: rw.temp != null ? `${rw.temp.toFixed(1)}\u00b0C` : '\u2014',
