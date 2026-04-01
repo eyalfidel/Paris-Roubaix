@@ -169,7 +169,7 @@
   /* === HELL METER === */
   .hell-meter-wrap {
     max-width: 1100px;
-    margin: 2rem auto;
+    margin: 2rem auto 4rem auto; /* שינינו את הרווח התחתון ל-4 כדי להרחיק אותו מנקודות המפתח */
     padding: 0 2rem;
   }
 
@@ -390,11 +390,17 @@
     text-align: center;
     color: var(--cream);
     letter-spacing: 0.05em;
-    min-height: 2rem;
+    height: 3.5rem; /* גובה קבוע וגדול מספיק ל-2 שורות */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
   }
 
   .pave-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--pave);
     color: var(--white);
     font-family: 'DM Mono', monospace;
@@ -404,6 +410,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     margin-top: 0.3rem;
+    height: 1.5rem; /* שומר מקום קבוע גם כשהתגית שקופה */
     opacity: 0;
     transform: translateY(4px);
     transition: all 0.3s ease;
@@ -939,69 +946,69 @@ const waypoints = [
   { km: 83.3,   place: "Busigny",                time: "12:51", pave: null },
   { km: 90.2,   place: "Bertry",                 time: "13:00", pave: null },
   { km: 93.5,   place: "Troisvilles",            time: "13:04", pave: null },
-  { km: 95.8,   place: "Troisvilles → Inchy",    time: "13:07", pave: { num: 30, name: "Troisvilles à Inchy", len: "2174 m" }},
+  { km: 95.8,   place: "Troisvilles → Inchy",    time: "13:07", pave: { num: 30, stars: 3, name: "Troisvilles à Inchy", len: "2174 m" }},
   { km: 98.0,   place: "Inchy",                  time: "13:10", pave: null },
   { km: 101.2,  place: "Viesly",                 time: "13:14", pave: null },
-  { km: 102.3,  place: "Viesly → Quiévy",        time: "13:16", pave: { num: 29, name: "Viesly à Quiévy", len: "1767 m" }},
+  { km: 102.3,  place: "Viesly → Quiévy",        time: "13:16", pave: { num: 29, stars: 3, name: "Viesly à Quiévy", len: "1767 m" }},
   { km: 104.1,  place: "Quiévy",                 time: "13:18", pave: null },
-  { km: 104.9,  place: "Quiévy → Fontaine",      time: "13:19", pave: { num: 28, name: "Quiévy à Fontaine au Tertre", len: "3715 m" }},
+  { km: 104.9,  place: "Quiévy → Fontaine",      time: "13:19", pave: { num: 28, stars: 4, name: "Quiévy à Fontaine au Tertre", len: "3715 m" }},
   { km: 108.6,  place: "Fontaine au Tertre",     time: "13:24", pave: null },
-  { km: 111.1,  place: "Viesly → Briastre",      time: "13:27", pave: { num: 27, name: "Viesly à Briastre", len: "3033 m" }},
+  { km: 111.1,  place: "Viesly → Briastre",      time: "13:27", pave: { num: 27, stars: 3, name: "Viesly à Briastre", len: "3033 m" }},
   { km: 114.1,  place: "Briastre",               time: "13:31", pave: null },
-  { km: 114.9,  place: "Briastre (sector)",       time: "13:32", pave: { num: 26, name: "Briastre", len: "843 m" }},
+  { km: 114.9,  place: "Briastre (sector)",       time: "13:32", pave: { num: 26, stars: 3, name: "Briastre", len: "843 m" }},
   { km: 115.7,  place: "Solesmes",               time: "13:33", pave: null },
-  { km: 123.7,  place: "Solesmes → Haussy",      time: "13:43", pave: { num: 25, name: "Solesmes à Haussy", len: "863 m" }},
+  { km: 123.7,  place: "Solesmes → Haussy",      time: "13:43", pave: { num: 25, stars: 2, name: "Solesmes à Haussy", len: "863 m" }},
   { km: 124.5,  place: "Haussy",                 time: "13:44", pave: null },
-  { km: 130.5,  place: "Saulzoir → Verchain",    time: "13:52", pave: { num: 24, name: "Saulzoir à Verchain-Maugré", len: "1209 m" }},
+  { km: 130.5,  place: "Saulzoir → Verchain",    time: "13:52", pave: { num: 24, stars: 2, name: "Saulzoir à Verchain-Maugré", len: "1209 m" }},
   { km: 131.7,  place: "Verchain-Maugré",        time: "13:53", pave: null },
-  { km: 134.9,  place: "Verchain → Quérénaing",  time: "13:57", pave: { num: 23, name: "Verchain-Maugré à Quérénaing", len: "1577 m" }},
+  { km: 134.9,  place: "Verchain → Quérénaing",  time: "13:57", pave: { num: 23, stars: 3, name: "Verchain-Maugré à Quérénaing", len: "1577 m" }},
   { km: 136.4,  place: "Quérénaing",             time: "13:59", pave: null },
-  { km: 137.5,  place: "Quérénaing → Maing",     time: "14:01", pave: { num: 22, name: "Quérénaing à Maing", len: "2481 m" }},
+  { km: 137.5,  place: "Quérénaing → Maing",     time: "14:01", pave: { num: 22, stars: 3, name: "Quérénaing à Maing", len: "2481 m" }},
   { km: 140.0,  place: "Maing",                  time: "14:04", pave: null },
-  { km: 140.7,  place: "Maing → Monchaux",       time: "14:05", pave: { num: 21, name: "Maing à Monchaux-sur-Écaillon", len: "1563 m" }},
+  { km: 140.7,  place: "Maing → Monchaux",       time: "14:05", pave: { num: 21, stars: 3, name: "Maing à Monchaux-sur-Écaillon", len: "1563 m" }},
   { km: 142.3,  place: "Monchaux-sur-Écaillon",  time: "14:07", pave: null },
   { km: 152.3,  place: "Haveluy",                time: "14:19", pave: null },
-  { km: 153.6,  place: "Haveluy → Wallers",      time: "14:21", pave: { num: 20, name: "Haveluy à Wallers", len: "2500 m" }},
+  { km: 153.6,  place: "Haveluy → Wallers",      time: "14:21", pave: { num: 20, stars: 4, name: "Haveluy à Wallers", len: "2500 m" }},
   { km: 156.1,  place: "Wallers",                time: "14:24", pave: null },
-  { km: 163.0,  place: "Trouée d'Arenberg",      time: "14:33", pave: { num: 19, name: "Trouée d'Arenberg", len: "2331 m", special: true }},
+  { km: 163.0,  place: "Trouée d'Arenberg",      time: "14:33", pave: { num: 19, stars: 5, name: "Trouée d'Arenberg", len: "2331 m", special: true }},
   { km: 165.4,  place: "After Arenberg",         time: "14:36", pave: null },
-  { km: 169.1,  place: "Wallers → Hélesmes",     time: "14:41", pave: { num: 18, name: "Wallers à Hélesmes", len: "1636 m" }},
+  { km: 169.1,  place: "Wallers → Hélesmes",     time: "14:41", pave: { num: 18, stars: 3, name: "Wallers à Hélesmes", len: "1636 m" }},
   { km: 170.7,  place: "Hélesmes",               time: "14:43", pave: null },
-  { km: 175.9,  place: "Hornaing → Wandignies",  time: "14:50", pave: { num: 17, name: "Hornaing à Wandignies", len: "3680 m" }},
+  { km: 175.9,  place: "Hornaing → Wandignies",  time: "14:50", pave: { num: 17, stars: 4, name: "Hornaing à Wandignies", len: "3680 m" }},
   { km: 179.6,  place: "Wandignies-Hamage",      time: "14:54", pave: null },
-  { km: 183.3,  place: "Warlaing → Brillon",     time: "14:59", pave: { num: 16, name: "Warlaing à Brillon", len: "2459 m" }},
+  { km: 183.3,  place: "Warlaing → Brillon",     time: "14:59", pave: { num: 16, stars: 3, name: "Warlaing à Brillon", len: "2459 m" }},
   { km: 185.8,  place: "Brillon",                time: "15:02", pave: null },
-  { km: 186.8,  place: "Tilloy → Sars",          time: "15:03", pave: { num: 15, name: "Tilloy à Sars-et-Rosières", len: "2380 m" }},
+  { km: 186.8,  place: "Tilloy → Sars",          time: "15:03", pave: { num: 15, stars: 4, name: "Tilloy à Sars-et-Rosières", len: "2380 m" }},
   { km: 189.2,  place: "Sars-et-Rosières",       time: "15:06", pave: null },
-  { km: 193.2,  place: "Beuvry → Orchies",       time: "15:12", pave: { num: 14, name: "Beuvry-la-Forêt à Orchies", len: "1314 m" }},
+  { km: 193.2,  place: "Beuvry → Orchies",       time: "15:12", pave: { num: 14, stars: 3, name: "Beuvry-la-Forêt à Orchies", len: "1314 m" }},
   { km: 194.5,  place: "Orchies",                time: "15:13", pave: null },
-  { km: 198.2,  place: "Orchies (sector)",       time: "15:18", pave: { num: 13, name: "Orchies", len: "1732 m" }},
+  { km: 198.2,  place: "Orchies (sector)",       time: "15:18", pave: { num: 13, stars: 3, name: "Orchies", len: "1732 m" }},
   { km: 199.9,  place: "Nomain",                 time: "15:20", pave: null },
-  { km: 204.3,  place: "Auchy → Bersée",         time: "15:26", pave: { num: 12, name: "Auchy-lez-Orchies à Bersée", len: "2656 m" }},
+  { km: 204.3,  place: "Auchy → Bersée",         time: "15:26", pave: { num: 12, stars: 4, name: "Auchy-lez-Orchies à Bersée", len: "2656 m" }},
   { km: 206.9,  place: "Bersée",                 time: "15:29", pave: null },
-  { km: 209.7,  place: "Mons-en-Pévèle",         time: "15:33", pave: { num: 11, name: "Mons-en-Pévèle", len: "2998 m", special: true }},
+  { km: 209.7,  place: "Mons-en-Pévèle",         time: "15:33", pave: { num: 11, stars: 5, name: "Mons-en-Pévèle", len: "2998 m", special: true }},
   { km: 212.7,  place: "Mérignies",              time: "15:37", pave: null },
-  { km: 215.7,  place: "Mérignies → Avelin",     time: "15:40", pave: { num: 10, name: "Mérignies à Avelin", len: "652 m" }},
+  { km: 215.7,  place: "Mérignies → Avelin",     time: "15:40", pave: { num: 10, stars: 2, name: "Mérignies à Avelin", len: "652 m" }},
   { km: 216.4,  place: "Avelin",                 time: "15:41", pave: null },
-  { km: 219.1,  place: "Pont-Thibault → Ennevelin", time: "15:45", pave: { num: 9, name: "Pont-Thibault à Ennevelin", len: "1384 m" }},
+  { km: 219.1,  place: "Pont-Thibault → Ennevelin", time: "15:45", pave: { num: 9, stars: 3, name: "Pont-Thibault à Ennevelin", len: "1384 m" }},
   { km: 220.5,  place: "Ennevelin",              time: "15:46", pave: null },
-  { km: 224.5,  place: "Templeuve (l'Épinette)", time: "15:52", pave: { num: 8, name: "Templeuve l'Épinette", len: "216 m" }},
-  { km: 225.1,  place: "Templeuve (Moulin)",     time: "15:52", pave: { num: 8, name: "Templeuve Moulin-de-Vertain", len: "565 m" }},
+  { km: 224.5,  place: "Templeuve (l'Épinette)", time: "15:52", pave: { num: 8, stars: 1, name: "Templeuve l'Épinette", len: "216 m" }},
+  { km: 225.1,  place: "Templeuve (Moulin)",     time: "15:52", pave: { num: 8, stars: 2, name: "Templeuve Moulin-de-Vertain", len: "565 m" }},
   { km: 225.6,  place: "Wachemy",                time: "15:53", pave: null },
-  { km: 231.5,  place: "Cysoing → Bourghelles",  time: "16:00", pave: { num: 7, name: "Cysoing à Bourghelles", len: "1279 m" }},
+  { km: 231.5,  place: "Cysoing → Bourghelles",  time: "16:00", pave: { num: 7, stars: 3, name: "Cysoing à Bourghelles", len: "1279 m" }},
   { km: 232.9,  place: "Bourghelles",            time: "16:02", pave: null },
-  { km: 234.0,  place: "Bourghelles → Wannehain",time: "16:04", pave: { num: 6, name: "Bourghelles à Wannehain", len: "1106 m" }},
+  { km: 234.0,  place: "Bourghelles → Wannehain",time: "16:04", pave: { num: 6, stars: 3, name: "Bourghelles à Wannehain", len: "1106 m" }},
   { km: 235.1,  place: "Wannehain",              time: "16:05", pave: null },
-  { km: 238.4,  place: "Camphin-en-Pévèle",      time: "16:09", pave: { num: 5, name: "Camphin-en-Pévèle", len: "1790 m" }},
+  { km: 238.4,  place: "Camphin-en-Pévèle",      time: "16:09", pave: { num: 5, stars: 4, name: "Camphin-en-Pévèle", len: "1790 m" }},
   { km: 240.2,  place: "After Camphin",          time: "16:12", pave: null },
-  { km: 241.2,  place: "Carrefour de l'Arbre",   time: "16:13", pave: { num: 4, name: "Carrefour de l'Arbre", len: "2109 m", special: true }},
+  { km: 241.2,  place: "Carrefour de l'Arbre",   time: "16:13", pave: { num: 4, stars: 5, name: "Carrefour de l'Arbre", len: "2109 m", special: true }},
   { km: 243.3,  place: "After Carrefour",        time: "16:16", pave: null },
-  { km: 243.5,  place: "Gruson",                 time: "16:16", pave: { num: 3, name: "Gruson", len: "1081 m" }},
+  { km: 243.5,  place: "Gruson",                 time: "16:16", pave: { num: 3, stars: 2, name: "Gruson", len: "1081 m" }},
   { km: 244.5,  place: "Gruson",                 time: "16:17", pave: null },
-  { km: 250.2,  place: "Willems → Hem",          time: "16:24", pave: { num: 2, name: "Willems à Hem", len: "1393 m" }},
+  { km: 250.2,  place: "Willems → Hem",          time: "16:24", pave: { num: 2, stars: 2, name: "Willems à Hem", len: "1393 m" }},
   { km: 251.6,  place: "Hem",                    time: "16:26", pave: null },
   { km: 255.8,  place: "Roubaix approach",       time: "16:32", pave: null },
-  { km: 256.9,  place: "Roubaix (Crupelandt)",   time: "16:33", pave: { num: 1, name: "Espace Charles Crupelandt", len: "263 m" }},
+  { km: 256.9,  place: "Roubaix (Crupelandt)",   time: "16:33", pave: { num: 1, stars: 1, name: "Espace Charles Crupelandt", len: "263 m" }},
   { km: 257.2,  place: "Vélodrome entrance",     time: "16:34", pave: null },
   { km: 258.3,  place: "Roubaix – Vélodrome",    time: "16:35", pave: null },
 ];
@@ -1127,6 +1134,7 @@ sectorWaypoints.forEach(wp => {
     <div class="sector-num">${wp.pave.num}</div>
     <div>
       <div class="sector-name">${wp.pave.name}</div>
+      <div style="color:var(--yellow); font-size: 0.75rem; margin-top: 2px;">${'★'.repeat(wp.pave.stars)}</div>
       <div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp} · ${w.rain} rain</div>
     </div>
     <div class="sector-km">
@@ -1558,7 +1566,7 @@ setSlider = function(km) {
   timeDisplayEl.textContent = wp.time;
   const pave = getActivePave(km);
   if (pave) {
-    paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 Pav\u00e9`;
+    paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 ${'★'.repeat(pave.stars)}`;
     paveBadgeEl.classList.add('visible');
     thumb.classList.add('in-pave');
     triggerMudEffect();
