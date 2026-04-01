@@ -1115,7 +1115,7 @@ function getNearestWaypoint(km) {
 function getActivePave(km) {
   for (const s of paveSectors) {
     if (km >= s.start && km <= s.end) {
-      // שולף את נתוני הכוכבים מתוך המערך הראשי כדי שיזהר בסליידר
+      // מוצא את הנתונים המורחבים (כולל כוכבים) לפי מספר הסקטור
       const sectorData = waypoints.find(w => w.pave && w.pave.num === s.num);
       return { ...s, stars: sectorData ? sectorData.pave.stars : 0 };
     }
@@ -1144,7 +1144,7 @@ KEY_POINTS.forEach(kp => {
     <div class="key-card-km">KM ${kp.km.toFixed(1)} · ${getTimeAt(kp.km)}</div>
     <div class="key-card-weather"><span class="weather-icon">${w.icon}</span> ${w.main} · ${w.temp}</div>
   `;
-  card.addEventListener('click', () => { setSlider(kp.km); window.raceMap.setZoom(13); });
+  card.addEventListener('click', () => window.jumpToLocation(kp.km, 13));
   keyGrid.appendChild(card);
 });
 
@@ -1167,7 +1167,7 @@ sectorWaypoints.forEach(wp => {
       <div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div>
     </div>
   `;
-  row.addEventListener('click', () => { setSlider(wp.km); window.raceMap.setZoom(14); });
+  row.addEventListener('click', () => window.jumpToLocation(wp.km, 14));
   sectorsGrid.appendChild(row);
 });
 
@@ -1586,7 +1586,6 @@ else desc = pave ? 'Dry cobbles \u2014 faster but still punishing' : label + ' c
   return getFakeWeather(km);
 }
 
-// Override setSlider with real-weather version
 setSlider = function(km) {
   km = Math.max(0, Math.min(TOTAL_KM, km));
   currentKm = km;
@@ -1598,9 +1597,11 @@ setSlider = function(km) {
   const wp = getNearestWaypoint(km);
   placeNameEl.textContent = wp.place.toUpperCase();
   timeDisplayEl.textContent = wp.time;
+  
   const pave = getActivePave(km);
   if (pave) {
-   paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 ${'★'.repeat(pave.stars)}`;
+    // עכשיו pave.stars קיים בזכות התיקון הקודם
+    paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 ${'★'.repeat(pave.stars || 0)}`;
     paveBadgeEl.classList.add('visible');
     thumb.classList.add('in-pave');
     triggerMudEffect();
@@ -1608,6 +1609,7 @@ setSlider = function(km) {
     paveBadgeEl.classList.remove('visible');
     thumb.classList.remove('in-pave');
   }
+
   const w = getWeatherForDisplay(km);
   wIcon.textContent = w.icon;
   wMain.textContent = w.main;
@@ -1618,9 +1620,9 @@ setSlider = function(km) {
   wTime.textContent = w.time;
 
   const rw = (w._rw) || null;
-
   const commentary = document.getElementById('mud-commentary');
   const mudText = document.getElementById('mud-text');
+
   if (pave && rw) {
     const text = getMudCommentary(wp.place, rw, pave);
     if (text) { mudText.innerHTML = text; commentary.classList.add('visible'); }
@@ -1634,6 +1636,16 @@ setSlider = function(km) {
 
   updateRain(km);
   if (window.updateMapRider) window.updateMapRider(km, !!pave);
+};
+
+// פונקציה חדשה לטיפול בקפיצה למיקום (בלחיצה)
+window.jumpToLocation = function(km, zoomLevel) {
+  setSlider(km);
+  const frac = km / TOTAL_KM;
+  const idx = Math.min(Math.floor(frac * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+  const pos = GPX_COORDS[idx];
+  // מעדכן גם מיקום וגם זום בפעולה אחת חלקה
+  window.raceMap.setView(pos, zoomLevel, { animate: true });
 };
 
 loadAllWeather();
