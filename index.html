@@ -230,10 +230,29 @@
     border-bottom: 1px solid rgba(196, 170, 140, 0.1);
   }
 
-  .key-points-grid {
+ .key-points-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
+  }
+
+  /* התאמות למסכים קטנים (מובייל) */
+  @media (max-width: 768px) {
+    .key-points-grid {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 1rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* מעלים את פס הגלילה ב-Firefox */
+    }
+    .key-points-grid::-webkit-scrollbar {
+      display: none; /* מעלים את פס הגלילה ב-Chrome/Safari */
+    }
+    .key-card {
+      flex: 0 0 75%; /* כל כרטיסייה תופסת 75% מרוחב המסך */
+      scroll-snap-align: start;
+    }
   }
 
   .key-card {
@@ -761,15 +780,14 @@
 </header>
 
 <!-- HELL METER -->
-<div class="hell-meter-wrap fade-in animate-delay-4">
-  <div class="hell-meter-card">
+<div class="hell-meter-card">
     <div>
       <div class="hell-label">Hell of the North Index</div>
-      <div class="hell-verdict muddy" id="hell-verdict">MUDDY &amp; EPIC</div>
+      <div class="hell-verdict" id="hell-verdict">LOADING...</div>
     </div>
     <div class="hell-bar-wrap">
       <div class="hell-bar-track">
-        <div class="hell-bar-fill" id="hell-fill" style="width: 72%"></div>
+        <div class="hell-bar-fill" id="hell-fill" style="width: 0%"></div>
       </div>
       <div class="hell-bar-labels">
         <span>Dry</span>
@@ -781,11 +799,10 @@
     </div>
     <div style="text-align:right">
       <div class="hell-label">Forecast Summary</div>
-      <div style="font-size:0.8rem; color:var(--gravel)">🌧️ Rain during race</div>
-      <div style="font-size:0.8rem; color:var(--gravel); margin-top:0.2rem">💧 Wet cobbles expected</div>
+      <div id="hell-summary-1" style="font-size:0.8rem; color:var(--gravel)">🔄 Fetching data...</div>
+      <div id="hell-summary-2" style="font-size:0.8rem; color:var(--gravel); margin-top:0.2rem"></div>
     </div>
   </div>
-</div>
 
 <!-- KEY POINTS -->
 <div class="key-points-wrap">
@@ -1351,6 +1368,42 @@ async function loadAllWeather() {
     weatherLoaded = true;
     dot.className = 'weather-status-dot';
     statusText.textContent = 'Live forecast \u00b7 Open-Meteo \u00b7 April 12, 2026';
+
+    // חישוב המדד הכללי ליום המרוץ
+    let maxHell = 0;
+    let maxRain = 0;
+    let maxWind = 0;
+
+    WEATHER_POINTS.forEach(pt => {
+      const rw = getRealWeather(pt[0], "14:00"); // בדיקת אמצע היום
+      if (rw) {
+         const currentHell = computeHellIndex(rw);
+         if (currentHell > maxHell) maxHell = currentHell;
+         if (rw.precip > maxRain) maxRain = rw.precip;
+         if (rw.wind > maxWind) maxWind = rw.wind;
+      }
+    });
+
+    // עדכון ה-UI של הבר הראשי
+    document.getElementById('hell-fill').style.width = maxHell + '%';
+    const v = hellVerdict(maxHell);
+    const verdictEl = document.getElementById('hell-verdict');
+    verdictEl.textContent = v.text;
+    verdictEl.className = 'hell-verdict ' + v.cls;
+
+    const summary1 = document.getElementById('hell-summary-1');
+    const summary2 = document.getElementById('hell-summary-2');
+    if (maxRain > 0.5) {
+        summary1.textContent = '🌧️ Rain expected on route';
+        summary2.textContent = '💧 Slippery cobbles alert';
+    } else if (maxWind > 20) {
+        summary1.textContent = '💨 High winds expected';
+        summary2.textContent = '🌪️ Crosswinds in open sectors';
+    } else {
+        summary1.textContent = '☀️ Dry race expected';
+        summary2.textContent = '💨 Fast & dusty cobbles';
+    }
+
     setSlider(currentKm);
   } catch (e) {
     weatherError = true;
@@ -1492,10 +1545,11 @@ setSlider = function(km) {
   wTime.textContent = w.time;
 
   const rw = (w._rw) || null;
-  const hellIdx = (weatherLoaded && rw) ? computeHellIndex(rw) : 72;
-  document.getElementById('hell-fill').style.width = hellIdx + '%';
-  const v = hellVerdict(hellIdx);
-  const verdictEl = document.getElementById('hell-verdict');
+  // not sure what these 4 rows do
+  //const hellIdx = (weatherLoaded && rw) ? computeHellIndex(rw) : 72;
+  //document.getElementById('hell-fill').style.width = hellIdx + '%';
+  //const v = hellVerdict(hellIdx);
+  //const verdictEl = document.getElementById('hell-verdict');
   verdictEl.textContent = v.text;
   verdictEl.className = 'hell-verdict ' + v.cls;
 
