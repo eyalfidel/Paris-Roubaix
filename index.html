@@ -169,9 +169,9 @@
   /* === HELL METER === */
   .hell-meter-wrap {
     max-width: 1100px;
-    margin: 2rem auto 5rem auto; /* רווח גדול של 5rem למטה */
+    margin: 2rem auto 5rem auto; /* כאן יצרנו את הרווח הגדול למטה */
     padding: 0 2rem 5rem 2rem;
-    border-bottom: 1px solid rgba(196, 170, 140, 0.08); /* קו מפריד עדין מאוד */
+    border-bottom: 1px solid rgba(196, 170, 140, 0.08); /* קו הפרדה עדין */
   }
 
   .hell-meter-card {
@@ -233,7 +233,7 @@
     font-size: 0.55rem;
     color: var(--dust);
   }
-
+  
   /* === KEY POINTS === */
   .key-points-wrap {
     max-width: 1100px;
@@ -1456,10 +1456,19 @@ async function loadAllWeather() {
     }
 
     setSlider(currentKm);
-  } catch (e) {
+ } catch (e) {
     weatherError = true;
     dot.className = 'weather-status-dot error';
     statusText.textContent = 'Forecast unavailable \u2014 showing simulated data';
+    
+    // מונע היתקעות במצב LOADING אם התחזית קורסת
+    document.getElementById('hell-fill').style.width = '72%';
+    const verdictEl = document.getElementById('hell-verdict');
+    verdictEl.textContent = 'MUDDY & EPIC';
+    verdictEl.className = 'hell-verdict muddy';
+    document.getElementById('hell-summary-1').textContent = '🌧️ Rain during race (Simulated)';
+    document.getElementById('hell-summary-2').textContent = '💧 Wet cobbles expected';
+    
     console.warn('Weather fetch failed:', e);
   }
 }
@@ -1698,7 +1707,7 @@ leafletJS.onload = function() {
     const ei = Math.floor(s.end * (TOTAL_POINTS - 1));
     const seg = GPX_COORDS.slice(si, ei + 1);
     if (seg.length > 1) {
-      L.polyline(seg, { color: 'rgba(212,98,42,0.85)', weight: 4 }).addTo(map);
+      L.polyline(seg, { color: 'rgba(212,98,42,0.85)', weight: 4 }).addTo(window.raceMap);
     }
   });
 
@@ -1719,7 +1728,7 @@ leafletJS.onload = function() {
       iconAnchor: [5,5],
     });
     L.marker([km.lat, km.lon], { icon })
-      .addTo(map)
+      .addTo(window.raceMap)
       .bindTooltip(km.name, { className: 'leaflet-tooltip', permanent: false, direction: 'top' });
   });
 
@@ -1730,7 +1739,7 @@ leafletJS.onload = function() {
     iconSize: [14,14],
     iconAnchor: [7,7],
   });
-  const riderMarker = L.marker(GPX_COORDS[0], { icon: riderIcon, zIndexOffset: 1000 }).addTo(map);
+  const riderMarker = L.marker(GPX_COORDS[0], { icon: riderIcon, zIndexOffset: 1000 }).addTo(window.raceMap);
 
   // Update rider on slider change
   window.updateMapRider = function(km, inPave) {
