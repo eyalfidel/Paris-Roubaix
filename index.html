@@ -458,7 +458,11 @@ function renderKeyPoints() {
     const card = document.createElement('div');
     card.className = `key-card ${kp.type}`;
     card.innerHTML = `<div class="key-card-name">${kp.icon} ${kp.name}</div>${kp.stars > 0 ? `<div style="color:var(--yellow); font-size: 0.8rem; margin: 4px 0;">${'★'.repeat(kp.stars)}</div>` : ''}<div class="key-card-sub">${kp.sub}</div><div class="key-card-km">KM ${kp.km.toFixed(1)} · ${getNearestWaypoint(kp.km).time}</div><div class="key-card-weather"><span class="weather-icon">${w.icon}</span> ${w.main} · ${w.temp}</div>`;
-    card.addEventListener('click', () => window.jumpToLocation(kp.km, 13));
+    card.addEventListener('click', () => {
+      window.jumpToLocation(kp.km, 13);
+      const sliderSection = document.querySelector('.slider-section');
+      if (sliderSection) sliderSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     grid.appendChild(card);
   });
 }
@@ -471,7 +475,19 @@ function renderSectors() {
     const row = document.createElement('div');
     row.className = 'sector-row';
     row.innerHTML = `<div class="sector-num">${wp.pave.displayNum}</div><div><div class="sector-name">${wp.pave.name}</div><div style="color:var(--yellow); font-size: 0.75rem; margin-top: 2px;">${'★'.repeat(wp.pave.stars)}</div><div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp}</div></div><div class="sector-km"><div>KM ${wp.km.toFixed(1)}</div><div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div></div>`;
-    row.addEventListener('click', () => window.jumpToLocation(wp.km, 14));
+    
+    // === כאן הוספנו את הגלילה החלקה למעלה ===
+    row.addEventListener('click', () => {
+      // 1. מקפיץ את המפה והסליידר לקילומטר הנכון
+      window.jumpToLocation(wp.km, 14); 
+      
+      // 2. גולל למעלה לאזור התחזית בצורה חלקה
+      const sliderSection = document.querySelector('.slider-section');
+      if (sliderSection) {
+        sliderSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+    
     grid.appendChild(row);
   });
 }
