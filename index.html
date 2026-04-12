@@ -1,1649 +1,735 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-M06BBDR3KD"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-M06BBDR3KD');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paris–Roubaix 2026 | L'Enfer du Nord Weather Tracker</title>
+<title>Paris–Roubaix Weather Tracker | L'Enfer du Nord</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚴</text></svg>">
+
+<meta property="og:title" content="Paris-Roubaix | Live Weather Tracker">
+<meta property="og:description" content="L'Enfer du Nord awaits. Explore the interactive map, track the 30 pavé sectors, and check the live mud & weather forecast.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://parisroubaix.eyalfidel.com/">
+<meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/3/36/The_peloton_through_Trou%C3%A9e_d%27Arenberg%2C_Paris-Roubaix_2008.jpg">
+
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+
 <style>
   :root {
-    --stone: #1a1714;
-    --mud: #3d2f1e;
-    --cobble: #2c2420;
-    --dust: #8a7560;
-    --gravel: #c4aa8c;
-    --cream: #f0e8d8;
-    --rain: #7ab3c8;
-    --rain-dark: #3a6f8a;
-    --pave: #d4622a;
-    --pave-light: #f0834a;
-    --green: #5a8a4a;
-    --yellow: #d4a820;
-    --red: #c03030;
-    --white: #faf6f0;
+    --stone: #1a1714; --mud: #3d2f1e; --cobble: #2c2420; --dust: #8a7560; --gravel: #c4aa8c;
+    --cream: #f0e8d8; --rain: #7ab3c8; --rain-dark: #3a6f8a; --pave: #d4622a;
+    --pave-light: #f0834a; --green: #5a8a4a; --yellow: #d4a820; --red: #c03030; --white: #faf6f0;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--stone); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-  body {
-    background: var(--stone);
-    color: var(--cream);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* === RAIN OVERLAY === */
-  #rain-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 1s;
-  }
-
-  /* === MUD SPLATTER === */
-  .mud-drop {
-    position: fixed;
-    width: 8px; height: 8px;
-    background: radial-gradient(circle, #5a3a1a, #3d2510);
-    border-radius: 50% 60% 50% 40%;
-    pointer-events: none;
-    z-index: 999;
-    animation: mudfall 0.6s ease-in forwards;
-  }
-  @keyframes mudfall {
-    0% { transform: scale(0) translateY(-20px); opacity: 1; }
-    60% { transform: scale(1.4) translateY(0); opacity: 1; }
-    100% { transform: scale(1) translateY(0); opacity: 0.7; }
-  }
+  /* === OVERLAYS === */
+  #rain-canvas, #fireworks-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 1s; }
+  .mud-drop { position: fixed; width: 8px; height: 8px; background: radial-gradient(circle, #5a3a1a, #3d2510); border-radius: 50% 60% 50% 40%; pointer-events: none; z-index: 999; animation: mudfall 0.6s ease-in forwards; }
+  @keyframes mudfall { 0% { transform: scale(0) translateY(-20px); opacity: 1; } 60% { transform: scale(1.4) translateY(0); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 0.7; } }
 
   /* === HEADER === */
-  header {
-    position: relative;
-    padding: 3rem 2rem 2rem;
-    border-bottom: 1px solid rgba(196, 170, 140, 0.15);
-    overflow: hidden;
-  }
+  header { position: relative; padding: 3rem 2rem 2rem; border-bottom: 1px solid rgba(196, 170, 140, 0.15); overflow: hidden; }
+  .header-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 100% at 80% 50%, rgba(212, 98, 42, 0.08) 0%, transparent 70%), linear-gradient(180deg, rgba(61, 47, 30, 0.4) 0%, transparent 100%); }
+  .header-content { position: relative; max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 2rem; }
+  .race-label { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--pave); text-transform: uppercase; margin-bottom: 0.5rem; }
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem, 8vw, 6rem); line-height: 0.9; letter-spacing: 0.02em; color: var(--white); }
+  h1 span { color: var(--pave); }
+  .subtitle { margin-top: 0.75rem; font-size: 0.85rem; color: var(--dust); font-weight: 300; letter-spacing: 0.05em; }
+  .header-meta { text-align: right; }
+  .date-big { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--gravel); letter-spacing: 0.05em; }
+  .stats-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
+  .stat-pill { font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 0.25rem 0.6rem; background: rgba(196, 170, 140, 0.1); border: 1px solid rgba(196, 170, 140, 0.2); border-radius: 2px; color: var(--dust); white-space: nowrap; }
 
-  .header-bg {
-    position: absolute;
-    inset: 0;
-    background: 
-      radial-gradient(ellipse 60% 100% at 80% 50%, rgba(212, 98, 42, 0.08) 0%, transparent 70%),
-      linear-gradient(180deg, rgba(61, 47, 30, 0.4) 0%, transparent 100%);
-  }
-
-  .header-content {
-    position: relative;
-    max-width: 1100px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    gap: 2rem;
-  }
-
-  .race-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    color: var(--pave);
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-  }
-
-  h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(3rem, 8vw, 6rem);
-    line-height: 0.9;
-    letter-spacing: 0.02em;
-    color: var(--white);
-  }
-
-  h1 span {
-    color: var(--pave);
-  }
-
-  .subtitle {
-    margin-top: 0.75rem;
-    font-size: 0.85rem;
-    color: var(--dust);
-    font-weight: 300;
-    letter-spacing: 0.05em;
-  }
-
-  .header-meta {
-    text-align: right;
-  }
-
-  .date-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: var(--gravel);
-    letter-spacing: 0.05em;
-  }
-
-  .stats-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .stat-pill {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    padding: 0.25rem 0.6rem;
-    background: rgba(196, 170, 140, 0.1);
-    border: 1px solid rgba(196, 170, 140, 0.2);
-    border-radius: 2px;
-    color: var(--dust);
-    white-space: nowrap;
-  }
+  /* === COUNTDOWN MODE === */
+  #countdown-mode { display: none; text-align: center; max-width: 800px; margin: 6rem auto; padding: 3rem; background: rgba(44, 36, 32, 0.6); border: 1px solid rgba(212, 98, 42, 0.3); border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .cd-title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: var(--white); margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+  .cd-timer { font-family: 'DM Mono', monospace; font-size: 1.2rem; color: var(--cream); margin-bottom: 2rem; }
+  .cd-days { color: var(--pave); font-size: 3.5rem; font-weight: bold; vertical-align: middle; margin: 0 0.5rem; }
 
   /* === HELL METER === */
-  .hell-meter-wrap {
-    max-width: 1100px;
-    margin: 2rem auto;
-    padding: 0 2rem;
-  }
-
-  .hell-meter-card {
-    background: linear-gradient(135deg, rgba(44, 36, 32, 0.8), rgba(61, 47, 30, 0.6));
-    border: 1px solid rgba(212, 98, 42, 0.3);
-    border-radius: 4px;
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
-
-  .hell-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    color: var(--pave);
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
-  }
-
-  .hell-verdict {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.8rem;
-    letter-spacing: 0.05em;
-    color: var(--white);
-  }
-
-  .hell-verdict.muddy { color: var(--pave-light); }
-  .hell-verdict.epic  { color: var(--red); }
-  .hell-verdict.dry   { color: var(--dust); }
-
-  .hell-bar-wrap {
-    flex: 1;
-    min-width: 200px;
-  }
-
-  .hell-bar-track {
-    height: 8px;
-    background: rgba(196, 170, 140, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .hell-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 40%, var(--pave) 70%, var(--red) 100%);
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .hell-bar-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.4rem;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    color: var(--dust);
-  }
-
-  /* === KEY POINTS === */
-  .key-points-wrap {
-    max-width: 1100px;
-    margin: 0 auto 2rem;
-    padding: 0 2rem;
-  }
-
-  .section-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    color: var(--dust);
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(196, 170, 140, 0.1);
-  }
-
-  .key-points-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .key-card {
-    background: rgba(44, 36, 32, 0.6);
-    border: 1px solid rgba(196, 170, 140, 0.12);
-    border-radius: 3px;
-    padding: 1rem 1.2rem;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .key-card::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--dust);
-    transition: background 0.2s;
-  }
-
-  .key-card.start::before  { background: var(--green); }
-  .key-card.finish::before { background: var(--pave); }
-  .key-card.pave::before   { background: var(--pave-light); }
-  .key-card.active, .key-card:hover {
-    background: rgba(212, 98, 42, 0.1);
-    border-color: rgba(212, 98, 42, 0.4);
-    transform: translateY(-1px);
-  }
-
-  .key-card-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.05em;
-    color: var(--white);
-    line-height: 1.1;
-  }
-
-  .key-card-sub {
-    font-size: 0.65rem;
-    color: var(--dust);
-    margin-top: 0.3rem;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .key-card-km {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--gravel);
-    margin-top: 0.6rem;
-  }
-
-  .key-card-weather {
-    margin-top: 0.6rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    color: var(--cream);
-  }
-
-  .weather-icon { font-size: 1rem; }
-
-  /* === SLIDER SECTION === */
-  .slider-section {
-    max-width: 1100px;
-    margin: 0 auto 2rem;
-    padding: 0 2rem;
-  }
-
-  .route-display {
-    background: rgba(44, 36, 32, 0.6);
-    border: 1px solid rgba(196, 170, 140, 0.12);
-    border-radius: 4px;
-    padding: 1.5rem 2rem;
-    margin-bottom: 1rem;
-  }
-
-  .route-top {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .route-stat {
-    text-align: center;
-  }
-
-  .route-stat-val {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    letter-spacing: 0.05em;
-    color: var(--white);
-    line-height: 1;
-  }
-
-  .route-stat-val.km-done { color: var(--pave-light); }
-  .route-stat-val.km-left { color: var(--rain); }
-
-  .route-stat-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    color: var(--dust);
-    text-transform: uppercase;
-    margin-top: 0.2rem;
-  }
-
-  .place-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    text-align: center;
-    color: var(--cream);
-    letter-spacing: 0.05em;
-    min-height: 2rem;
-  }
-
-  .pave-badge {
-    display: inline-block;
-    background: var(--pave);
-    color: var(--white);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 2px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-top: 0.3rem;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: all 0.3s ease;
-  }
-
-  .pave-badge.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .time-display {
-    text-align: center;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--dust);
-    margin-top: 0.5rem;
-  }
-
-  /* === PROGRESS TRACK === */
-  .progress-wrap {
-    margin-bottom: 1rem;
-    position: relative;
-  }
-
-  .progress-track {
-    position: relative;
-    height: 48px;
-    cursor: pointer;
-    padding: 8px 0;
-  }
-
-  .progress-bg {
-    position: absolute;
-    left: 0; right: 0;
-    top: 50%; transform: translateY(-50%);
-    height: 6px;
-    background: rgba(196, 170, 140, 0.1);
-    border-radius: 3px;
-  }
-
-  .progress-pave-segments {
-    position: absolute;
-    left: 0; right: 0;
-    top: 50%; transform: translateY(-50%);
-    height: 6px;
-  }
-
-  .pave-segment {
-    position: absolute;
-    height: 100%;
-    background: var(--pave);
-    opacity: 0.6;
-    border-radius: 1px;
-  }
-
-  .progress-fill {
-    position: absolute;
-    left: 0;
-    top: 50%; transform: translateY(-50%);
-    height: 6px;
-    background: linear-gradient(90deg, var(--rain-dark), var(--rain));
-    border-radius: 3px;
-    pointer-events: none;
-    transition: width 0.05s;
-  }
-
-  .progress-thumb {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px; height: 20px;
-    background: var(--white);
-    border-radius: 50%;
-    border: 3px solid var(--rain);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    pointer-events: none;
-    transition: left 0.05s;
-  }
-
-  .progress-thumb.in-pave {
-    border-color: var(--pave);
-    box-shadow: 0 0 0 4px rgba(212, 98, 42, 0.2), 0 2px 8px rgba(0,0,0,0.4);
-  }
-
-  /* km tick marks */
-  .km-ticks {
-    position: relative;
-    height: 20px;
-    margin-top: 0.25rem;
-  }
-
-  .km-tick {
-    position: absolute;
-    transform: translateX(-50%);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.55rem;
-    color: rgba(196, 170, 140, 0.4);
-    top: 0;
-  }
-
-  .km-tick::before {
-    content: '';
-    display: block;
-    width: 1px;
-    height: 6px;
-    background: rgba(196, 170, 140, 0.2);
-    margin: 0 auto 2px;
-  }
-
-  /* === WEATHER CARD === */
-  .weather-card {
-    background: rgba(26, 23, 20, 0.6);
-    border: 1px solid rgba(196, 170, 140, 0.1);
-    border-radius: 3px;
-    padding: 1.2rem 1.5rem;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  .weather-icon-big {
-    font-size: 2.5rem;
-    line-height: 1;
-  }
-
-  .weather-main {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.4rem;
-    letter-spacing: 0.05em;
-    color: var(--cream);
-  }
-
-  .weather-desc {
-    font-size: 0.75rem;
-    color: var(--dust);
-    margin-top: 0.2rem;
-    font-weight: 300;
-  }
-
-  .weather-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    text-align: right;
-  }
-
-  .weather-detail {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--gravel);
-  }
-
-  .weather-detail span {
-    color: var(--cream);
-    margin-left: 0.5rem;
-  }
-
-  /* === SECTOR LIST === */
-  .sectors-wrap {
-    max-width: 1100px;
-    margin: 0 auto 3rem;
-    padding: 0 2rem;
-  }
-
-  .sectors-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 0.5rem;
-  }
-
-  .sector-row {
-    background: rgba(44, 36, 32, 0.4);
-    border: 1px solid rgba(196, 170, 140, 0.08);
-    border-radius: 2px;
-    padding: 0.75rem 1rem;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .sector-row:hover {
-    background: rgba(212, 98, 42, 0.08);
-    border-color: rgba(212, 98, 42, 0.2);
-  }
-
-  .sector-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.4rem;
-    color: var(--pave);
-    width: 2rem;
-    text-align: center;
-    line-height: 1;
-  }
-
-  .sector-name {
-    font-size: 0.78rem;
-    color: var(--cream);
-    font-weight: 400;
-    line-height: 1.3;
-  }
-
-  .sector-km {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--dust);
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .sector-weather-mini {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    margin-top: 0.2rem;
-    font-size: 0.65rem;
-    color: var(--dust);
-  }
-
-  /* === FOOTER === */
-  footer {
-    border-top: 1px solid rgba(196, 170, 140, 0.1);
-    padding: 1.5rem 2rem;
-    text-align: center;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: rgba(138, 117, 96, 0.5);
-    letter-spacing: 0.1em;
-  }
-
-  /* === ANIMATIONS === */
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .fade-in { animation: fadeInUp 0.5s ease forwards; }
-
-  .animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
-  .animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
-  .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
-  .animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--stone); }
-  ::-webkit-scrollbar-thumb { background: var(--mud); border-radius: 3px; }
-
-  /* === MAP === */
-  .map-section {
-    max-width: 1100px;
-    margin: 0 auto 2rem;
-    padding: 0 2rem;
-  }
-
-  #route-map {
-    width: 100%;
-    height: 420px;
-    border-radius: 3px;
-    border: 1px solid rgba(196, 170, 140, 0.15);
-    background: #1a1714;
-    position: relative;
-    z-index: 0;
-  }
-
-  /* Leaflet dark overrides */
-  .leaflet-container {
-    background: #1a1714 !important;
-    font-family: 'DM Mono', monospace !important;
-  }
-  .leaflet-tile { filter: brightness(0.55) saturate(0.4) hue-rotate(180deg); }
-  .leaflet-control-zoom a {
-    background: #2c2420 !important;
-    color: var(--cream) !important;
-    border-color: rgba(196,170,140,0.2) !important;
-  }
-  .leaflet-control-attribution {
-    background: rgba(26,23,20,0.8) !important;
-    color: var(--dust) !important;
-    font-size: 0.55rem !important;
-  }
-  .map-rider-dot {
-    width: 14px; height: 14px;
-    background: var(--rain);
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(122,179,200,0.8);
-    transition: left 0.1s, top 0.1s;
-  }
-  .map-rider-dot.in-pave {
-    background: var(--pave-light);
-    box-shadow: 0 0 10px rgba(240,131,74,0.9);
-  }
-  .map-key-marker {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.6);
-    cursor: pointer;
-  }
-
-
-  /* === MUD COMMENTARY === */
-  .mud-commentary {
-    margin-top: 1rem;
-    padding: 0.9rem 1.2rem;
-    background: rgba(61, 47, 30, 0.5);
-    border-left: 3px solid var(--pave);
-    border-radius: 0 3px 3px 0;
-    display: none;
-    animation: fadeInUp 0.4s ease forwards;
-  }
-  .mud-commentary.visible { display: block; }
-  .mud-commentary-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    color: var(--pave);
-    text-transform: uppercase;
-    margin-bottom: 0.3rem;
-  }
-  .mud-commentary-text {
-    font-size: 0.82rem;
-    color: var(--cream);
-    font-weight: 300;
-    line-height: 1.5;
-  }
+  .hell-meter-wrap { max-width: 1100px; margin: 2rem auto 2.5rem auto; padding: 0 2rem 1.5rem 2rem; border-bottom: 1px solid rgba(196, 170, 140, 0.08); }
+  .hell-meter-card { background: linear-gradient(135deg, rgba(44, 36, 32, 0.8), rgba(61, 47, 30, 0.6)); border: 1px solid rgba(212, 98, 42, 0.3); border-radius: 4px; padding: 1.5rem 2rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+  .hell-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; color: var(--pave); text-transform: uppercase; margin-bottom: 0.4rem; }
+  .hell-verdict { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.05em; color: var(--white); }
+  .hell-verdict.muddy { color: var(--pave-light); } .hell-verdict.epic { color: var(--red); } .hell-verdict.dry { color: var(--dust); }
+  .hell-bar-wrap { flex: 1; min-width: 200px; }
+  .hell-bar-track { height: 8px; background: rgba(196, 170, 140, 0.1); border-radius: 2px; overflow: hidden; position: relative; }
+  .hell-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 40%, var(--pave) 70%, var(--red) 100%); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+  .hell-bar-labels { display: flex; justify-content: space-between; margin-top: 0.4rem; font-family: 'DM Mono', monospace; font-size: 0.55rem; color: var(--dust); }
+
+  /* === SECTIONS === */
+  .section-title { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; color: var(--dust); text-transform: uppercase; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(196, 170, 140, 0.1); }
+  .key-points-wrap, .slider-section, .map-section, .sectors-wrap { max-width: 1100px; margin: 0 auto 2.5rem; padding: 0 2rem; }
+  
+  /* KEY POINTS */
+  .key-points-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; }
+  @media (max-width: 768px) { .key-points-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 1rem; scrollbar-width: none; } .key-card { flex: 0 0 75%; scroll-snap-align: start; } }
+  .key-card { background: rgba(44, 36, 32, 0.6); border: 1px solid rgba(196, 170, 140, 0.12); border-radius: 3px; padding: 1rem 1.2rem; cursor: pointer; transition: all 0.25s ease; position: relative; overflow: hidden; }
+  .key-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--dust); }
+  .key-card.start::before { background: var(--green); } .key-card.finish::before { background: var(--pave); } .key-card.pave::before { background: var(--pave-light); }
+  .key-card:hover { background: rgba(212, 98, 42, 0.1); border-color: rgba(212, 98, 42, 0.4); transform: translateY(-1px); }
+  .key-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.05em; color: var(--white); line-height: 1.1; }
+  .key-card-sub { font-size: 0.65rem; color: var(--dust); margin-top: 0.3rem; font-family: 'DM Mono', monospace; }
+  .key-card-km { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--gravel); margin-top: 0.6rem; }
+  .key-card-weather { margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--cream); }
+
+  /* SLIDER & ROUTE */
+  .route-display { background: rgba(44, 36, 32, 0.6); border: 1px solid rgba(196, 170, 140, 0.12); border-radius: 4px; padding: 1.5rem 2rem; margin-bottom: 1rem; }
+  .route-top { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .route-stat { text-align: center; }
+  .route-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; color: var(--white); line-height: 1; }
+  .route-stat-val.km-done { color: var(--pave-light); } .route-stat-val.km-left { color: var(--rain); }
+  .route-stat-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; color: var(--dust); text-transform: uppercase; margin-top: 0.2rem; }
+  .place-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; text-align: center; color: var(--cream); letter-spacing: 0.05em; height: 3.5rem; display: flex; align-items: center; justify-content: center; line-height: 1.1; }
+  .pave-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--pave); color: var(--white); font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.3rem; height: 1.5rem; opacity: 0; transform: translateY(4px); transition: all 0.3s ease; }
+  .pave-badge.visible { opacity: 1; transform: translateY(0); }
+  .time-display { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--dust); margin-top: 0.5rem; }
+  
+  .progress-wrap { margin-bottom: 1rem; position: relative; }
+  .progress-track { position: relative; height: 48px; cursor: pointer; padding: 8px 0; }
+  .progress-bg { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 6px; background: rgba(196, 170, 140, 0.1); border-radius: 3px; }
+  .progress-pave-segments { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 6px; }
+  .pave-segment { position: absolute; height: 100%; background: var(--pave); opacity: 0.6; border-radius: 1px; }
+  .progress-fill { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 6px; background: linear-gradient(90deg, var(--rain-dark), var(--rain)); border-radius: 3px; pointer-events: none; transition: width 0.05s; }
+  .progress-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: var(--white); border-radius: 50%; border: 3px solid var(--rain); box-shadow: 0 2px 8px rgba(0,0,0,0.4); pointer-events: none; transition: left 0.05s; }
+  .progress-thumb.in-pave { border-color: var(--pave); box-shadow: 0 0 0 4px rgba(212, 98, 42, 0.2), 0 2px 8px rgba(0,0,0,0.4); }
+  .km-ticks { position: relative; height: 20px; margin-top: 0.25rem; }
+  .km-tick { position: absolute; transform: translateX(-50%); font-family: 'DM Mono', monospace; font-size: 0.55rem; color: rgba(196, 170, 140, 0.4); top: 0; }
+  
+  .weather-status-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--dust); letter-spacing: 0.1em; }
+  .weather-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  .weather-status-dot.loading { background: var(--yellow); } .weather-status-dot.error { background: var(--red); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .weather-card { background: rgba(26, 23, 20, 0.6); border: 1px solid rgba(196, 170, 140, 0.1); border-radius: 3px; padding: 1.2rem 1.5rem; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.5rem; }
+  .weather-icon-big { font-size: 2.5rem; }
+  .weather-main { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.05em; color: var(--cream); }
+  .weather-desc { font-size: 0.75rem; color: var(--dust); margin-top: 0.2rem; font-weight: 300; }
+  .weather-details { display: flex; flex-direction: column; gap: 0.3rem; text-align: right; }
+  .weather-detail { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--gravel); }
+  .weather-detail span { color: var(--cream); margin-left: 0.5rem; }
+
+  .mud-commentary { margin-top: 1rem; padding: 0.9rem 1.2rem; border-radius: 0 3px 3px 0; height: 8rem; background: transparent; border-left: 3px solid transparent; opacity: 0; visibility: hidden; transition: all 0.3s ease; overflow: hidden; }
+  .mud-commentary.visible { background: rgba(61, 47, 30, 0.5); border-left-color: var(--pave); opacity: 1; visibility: visible; }
+  .mud-commentary-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; color: var(--pave); text-transform: uppercase; margin-bottom: 0.3rem; }
+  .mud-commentary-text { font-size: 0.82rem; color: var(--cream); font-weight: 300; line-height: 1.5; }
   .mud-commentary-text strong { color: var(--pave-light); font-weight: 600; }
 
-  /* === WEATHER STATUS STATES === */
-  .weather-card.loading { opacity: 0.5; }
-  .weather-status-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.8rem;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--dust);
-    letter-spacing: 0.1em;
-  }
-  .weather-status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--green);
-    animation: pulse 2s infinite;
-  }
-  .weather-status-dot.loading { background: var(--yellow); }
-  .weather-status-dot.error   { background: var(--red); animation: none; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
-  }
+  /* MAP */
+  #route-map { width: 100%; height: 480px; border-radius: 4px; border: 1px solid rgba(196, 170, 140, 0.2); background: #1a1714; position: relative; z-index: 0; }
+  .leaflet-container { background: #1a1714 !important; font-family: 'DM Mono', monospace !important; }
+  .leaflet-control-zoom a { background: rgba(44, 36, 32, 0.9) !important; color: var(--cream) !important; border-color: rgba(196,170,140,0.2) !important; }
+  .map-rider-dot { width: 16px; height: 16px; background: var(--white); border: 3px solid var(--rain); border-radius: 50%; box-shadow: 0 0 12px rgba(122,179,200,0.9); transition: all 0.2s; }
+  .map-rider-dot.in-pave { background: var(--yellow); border-color: var(--pave); box-shadow: 0 0 15px rgba(240,131,74,1); transform: scale(1.2); }
+  .map-key-marker { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 0 5px rgba(0,0,0,0.5); cursor: pointer; }
 
-  /* Previous rain indicator */
-  .prev-rain-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    background: rgba(61,47,30,0.7);
-    border: 1px solid rgba(212,98,42,0.4);
-    border-radius: 2px;
-    padding: 0.15rem 0.5rem;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--pave-light);
-    margin-left: 0.5rem;
-  }
+  /* SECTORS */
+  .sectors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.5rem; }
+  .sector-row { background: rgba(44, 36, 32, 0.4); border: 1px solid rgba(196, 170, 140, 0.08); border-radius: 2px; padding: 0.75rem 1rem; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.2s ease; }
+  .sector-row:hover { background: rgba(212, 98, 42, 0.08); border-color: rgba(212, 98, 42, 0.2); }
+  .sector-num { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--pave); width: 2rem; text-align: center; line-height: 1; }
+  .sector-name { font-size: 0.78rem; color: var(--cream); font-weight: 400; line-height: 1.3; }
+  .sector-km { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--dust); text-align: right; white-space: nowrap; }
+  .sector-weather-mini { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; font-size: 0.65rem; color: var(--dust); }
 
+  footer { border-top: 1px solid rgba(196, 170, 140, 0.1); padding: 1.5rem 2rem; text-align: center; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: rgba(138, 117, 96, 0.5); letter-spacing: 0.1em; }
+  .fade-in { animation: fadeInUp 0.5s ease forwards; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--stone); } ::-webkit-scrollbar-thumb { background: var(--mud); border-radius: 3px; }
 </style>
 </head>
 <body>
 
 <canvas id="rain-canvas"></canvas>
+<canvas id="fireworks-canvas"></canvas>
 
-<!-- HEADER -->
 <header>
   <div class="header-bg"></div>
   <div class="header-content">
     <div>
-      <div class="race-label fade-in">UCI WorldTour · Monument · April 12, 2026</div>
-      <h1 class="fade-in animate-delay-1">Paris–<span>Roubaix</span></h1>
-      <div class="subtitle fade-in animate-delay-2">L'Enfer du Nord · Weather Tracker · 258.3 km · 30 Pavé Sectors</div>
+      <div class="race-label" id="header-date-label">UCI WorldTour · Monument</div>
+      <h1 class="fade-in">Paris–<span>Roubaix</span></h1>
+      <div class="subtitle fade-in" id="header-subtitle">L'Enfer du Nord · Weather Tracker · Loading Data...</div>
     </div>
-    <div class="header-meta fade-in animate-delay-3">
-      <div class="date-big">12.04.2026</div>
-      <div class="stats-row">
-        <div class="stat-pill">START 10:50</div>
-        <div class="stat-pill">258.3 KM</div>
-        <div class="stat-pill">30 SECTORS</div>
-        <div class="stat-pill">54.5 KM PAVÉ</div>
+    <div class="header-meta fade-in">
+      <div class="date-big" id="header-date-big">--.--.----</div>
+      <div class="stats-row" id="header-stats-row" style="display:none;">
+        <div class="stat-pill" id="stat-start">START --:--</div>
+        <div class="stat-pill" id="stat-km">--- KM</div>
+        <div class="stat-pill" id="stat-sectors">-- SECTORS</div>
       </div>
     </div>
   </div>
 </header>
 
-<!-- HELL METER -->
-<div class="hell-meter-wrap fade-in animate-delay-4">
-  <div class="hell-meter-card">
-    <div>
-      <div class="hell-label">Hell of the North Index</div>
-      <div class="hell-verdict muddy" id="hell-verdict">MUDDY &amp; EPIC</div>
-    </div>
-    <div class="hell-bar-wrap">
-      <div class="hell-bar-track">
-        <div class="hell-bar-fill" id="hell-fill" style="width: 72%"></div>
-      </div>
-      <div class="hell-bar-labels">
-        <span>Dry</span>
-        <span>Dusty</span>
-        <span>Damp</span>
-        <span>Muddy</span>
-        <span>Full Hell</span>
-      </div>
-    </div>
-    <div style="text-align:right">
-      <div class="hell-label">Forecast Summary</div>
-      <div style="font-size:0.8rem; color:var(--gravel)">🌧️ Rain during race</div>
-      <div style="font-size:0.8rem; color:var(--gravel); margin-top:0.2rem">💧 Wet cobbles expected</div>
-    </div>
+<div id="countdown-mode">
+  <h2 class="cd-title">L'Enfer du Nord Returns</h2>
+  <div class="cd-timer">
+    The race takes place in <span id="cd-days" class="cd-days">--</span> days, on <span id="cd-full-date">--</span>.
+  </div>
+  <div style="font-size: 0.9rem; color: var(--dust); border-top: 1px solid rgba(196, 170, 140, 0.1); padding-top: 1.5rem;">
+    ⏳ The live interactive weather tracker will activate 14 days before the race.
   </div>
 </div>
 
-<!-- KEY POINTS -->
-<div class="key-points-wrap">
-  <div class="section-title">Key Points</div>
-  <div class="key-points-grid" id="key-points-grid">
-    <!-- filled by JS -->
-  </div>
-</div>
-
-
-<!-- MAP -->
-<div class="map-section">
-  <div class="section-title">Route Map — position syncs with slider</div>
-  <div id="route-map"></div>
-</div>
-
-<!-- SLIDER SECTION -->
-<div class="slider-section">
-  <div class="section-title">Route Explorer — drag to explore the race</div>
-
-  <div class="route-display">
-    <div class="route-top">
-      <div class="route-stat">
-        <div class="route-stat-val km-done" id="km-done">0.0</div>
-        <div class="route-stat-label">km ridden</div>
-      </div>
-      <div class="route-stat">
-        <div class="place-name" id="place-name">COMPIÈGNE</div>
-        <div style="text-align:center">
-          <span class="pave-badge" id="pave-badge">Pavé sector</span>
-        </div>
-        <div class="time-display" id="time-display">Départ 10:50</div>
-      </div>
-      <div class="route-stat">
-        <div class="route-stat-val km-left" id="km-left">258.3</div>
-        <div class="route-stat-label">km to Roubaix</div>
-      </div>
-    </div>
-
-    <div class="progress-wrap">
-      <div class="progress-track" id="progress-track">
-        <div class="progress-bg"></div>
-        <div class="progress-pave-segments" id="pave-segments"></div>
-        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-        <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
-      </div>
-      <div class="km-ticks" id="km-ticks"></div>
-    </div>
-
-    <!-- Weather at current point -->
-    <div class="weather-status-bar">
-      <div class="weather-status-dot loading" id="weather-dot"></div>
-      <span id="weather-status-text">Loading real forecast...</span>
-    </div>
-    <div class="weather-card" id="weather-card">
-      <div class="weather-icon-big" id="w-icon">🌧️</div>
+<div id="live-mode" style="display:none;">
+  <div class="hell-meter-wrap">
+    <div class="hell-meter-card">
       <div>
-        <div class="weather-main" id="w-main">Light Rain</div>
-        <div class="weather-desc" id="w-desc">Wet cobbles — high crash risk in sectors</div>
+        <div class="hell-label">Hell of the North Index</div>
+        <div class="hell-verdict" id="hell-verdict">LOADING...</div>
       </div>
-      <div class="weather-details">
-        <div class="weather-detail">Temp <span id="w-temp">9°C</span></div>
-        <div class="weather-detail">Wind <span id="w-wind">22 km/h NE</span></div>
-        <div class="weather-detail">Rain <span id="w-rain">2.4 mm/h</span></div>
-        <div class="weather-detail">Time <span id="w-time">10:50</span></div>
+      <div class="hell-bar-wrap">
+        <div class="hell-bar-track"><div class="hell-bar-fill" id="hell-fill" style="width: 0%"></div></div>
+        <div class="hell-bar-labels"><span>Dry</span><span>Dusty</span><span>Damp</span><span>Muddy</span><span>Full Hell</span></div>
       </div>
-    </div>
-    <!-- Mud commentary -->
-    <div class="mud-commentary" id="mud-commentary">
-      <div class="mud-commentary-label">🟤 Sector Conditions</div>
-      <div class="mud-commentary-text" id="mud-text"></div>
+      <div style="text-align:right">
+        <div class="hell-label">Forecast Summary</div>
+        <div id="hell-summary-1" style="font-size:0.8rem; color:var(--gravel)">🔄 Fetching data...</div>
+        <div id="hell-summary-2" style="font-size:0.8rem; color:var(--gravel); margin-top:0.2rem"></div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- SECTORS -->
-<div class="sectors-wrap">
-  <div class="section-title">All 30 Pavé Sectors</div>
-  <div class="sectors-grid" id="sectors-grid"></div>
+  <div class="key-points-wrap">
+    <div class="section-title">Key Points</div>
+    <div class="key-points-grid" id="key-points-grid"></div>
+  </div>
+
+  <div class="slider-section">
+    <div class="section-title">Route Explorer — drag to explore the race</div>
+    <div class="route-display">
+      <div class="route-top">
+        <div class="route-stat"><div class="route-stat-val km-done" id="km-done">0.0</div><div class="route-stat-label">km ridden</div></div>
+        <div class="route-stat">
+          <div class="place-name" id="place-name">START</div>
+          <div style="text-align:center"><span class="pave-badge" id="pave-badge">Pavé</span></div>
+          <div class="time-display" id="time-display">--:--</div>
+        </div>
+        <div class="route-stat"><div class="route-stat-val km-left" id="km-left">--</div><div class="route-stat-label">km to Roubaix</div></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-track" id="progress-track">
+          <div class="progress-bg"></div>
+          <div class="progress-pave-segments" id="pave-segments"></div>
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+          <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
+        </div>
+        <div class="km-ticks" id="km-ticks"></div>
+      </div>
+      <div class="weather-status-bar">
+        <div class="weather-status-dot loading" id="weather-dot"></div><span id="weather-status-text">Loading forecast...</span>
+      </div>
+      <div class="weather-card" id="weather-card">
+        <div class="weather-icon-big" id="w-icon">🌧️</div>
+        <div><div class="weather-main" id="w-main">--</div><div class="weather-desc" id="w-desc">--</div></div>
+        <div class="weather-details">
+          <div class="weather-detail">Temp <span id="w-temp">--</span></div>
+          <div class="weather-detail">Wind <span id="w-wind">--</span></div>
+          <div class="weather-detail">Rain <span id="w-rain">--</span></div>
+          <div class="weather-detail">Time <span id="w-time">--</span></div>
+        </div>
+      </div>
+      <div class="mud-commentary" id="mud-commentary">
+        <div class="mud-commentary-label">🟤 Sector Conditions</div>
+        <div class="mud-commentary-text" id="mud-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-section"><div class="section-title">Live Route Tracking</div><div id="route-map"></div></div>
+  <div class="sectors-wrap"><div class="section-title" id="sectors-title">All Pavé Sectors</div><div class="sectors-grid" id="sectors-grid"></div></div>
 </div>
 
 <footer>
-  PARIS–ROUBAIX 2026 · WEATHER DATA IS SIMULATED · REAL FORECASTS COMING APRIL 10 · L'ENFER DU NORD
+  <div style="margin-bottom: 0.8rem; font-size: 0.8rem; color: var(--dust);">PARIS–ROUBAIX WEATHER TRACKER</div>
+  <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.8rem;">
+    <span>Forecasts by <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a></span>
+    <span>Maps by <a href="https://leafletjs.com/" target="_blank">Leaflet</a> & <a href="https://carto.com/" target="_blank">CARTO</a></span>
+  </div>
+  <div style="font-size: 0.55rem; opacity: 0.6;">© <span id="footer-year"></span> Eyal Fidel · Not affiliated with ASO</div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-// ===================== DATA =====================
-const TOTAL_KM = 258.3;
+// ===================== DYNAMIC GLOBALS =====================
+let TOTAL_KM = 258.3;
+let TOTAL_POINTS = 0;
+let GPX_COORDS = [];
+let waypoints = [];
+let paveSectors = [];
+let KEY_POINTS = [];
+const WEATHER_POINTS = [ [0.0, 49.44708, 2.89949], [19.4, 49.74483, 3.07086], [43.9, 49.99274, 3.45094], [69.7, 50.16332, 3.43560], [95.6, 50.24197, 3.44658], [121.4, 50.32157, 3.40902], [147.2, 50.37523, 3.35157], [162.7, 50.42529, 3.32251], [188.6, 50.48909, 3.17512], [214.4, 50.54231, 3.18451], [235.1, 50.59484, 3.24313], [250.6, 50.64656, 3.19561], [258.3, 50.67804, 3.20633] ];
 
-const waypoints = [
-  { km: 0.0,    place: "Compiègne",             time: "10:50", pave: null },
-  { km: 3.2,    place: "Carrefour D130-D165",    time: "11:09", pave: null },
-  { km: 14.5,   place: "Sempigny",               time: "11:23", pave: null },
-  { km: 17.1,   place: "Noyon",                  time: "11:27", pave: null },
-  { km: 35.2,   place: "Muille-Villette",        time: "11:50", pave: null },
-  { km: 37.2,   place: "Ham",                    time: "11:52", pave: null },
-  { km: 42.9,   place: "Villers-Saint-Christophe", time: "12:00", pave: null },
-  { km: 46.8,   place: "Fluquières",             time: "12:05", pave: null },
-  { km: 53.7,   place: "Dallon",                 time: "12:13", pave: null },
-  { km: 54.7,   place: "Saint-Quentin",          time: "12:15", pave: null },
-  { km: 64.3,   place: "Lesdins",                time: "12:27", pave: null },
-  { km: 77.5,   place: "Bohain-en-Vermandois",   time: "12:44", pave: null },
-  { km: 83.3,   place: "Busigny",                time: "12:51", pave: null },
-  { km: 90.2,   place: "Bertry",                 time: "13:00", pave: null },
-  { km: 93.5,   place: "Troisvilles",            time: "13:04", pave: null },
-  { km: 95.8,   place: "Troisvilles → Inchy",    time: "13:07", pave: { num: 30, name: "Troisvilles à Inchy", len: "2174 m" }},
-  { km: 98.0,   place: "Inchy",                  time: "13:10", pave: null },
-  { km: 101.2,  place: "Viesly",                 time: "13:14", pave: null },
-  { km: 102.3,  place: "Viesly → Quiévy",        time: "13:16", pave: { num: 29, name: "Viesly à Quiévy", len: "1767 m" }},
-  { km: 104.1,  place: "Quiévy",                 time: "13:18", pave: null },
-  { km: 104.9,  place: "Quiévy → Fontaine",      time: "13:19", pave: { num: 28, name: "Quiévy à Fontaine au Tertre", len: "3715 m" }},
-  { km: 108.6,  place: "Fontaine au Tertre",     time: "13:24", pave: null },
-  { km: 111.1,  place: "Viesly → Briastre",      time: "13:27", pave: { num: 27, name: "Viesly à Briastre", len: "3033 m" }},
-  { km: 114.1,  place: "Briastre",               time: "13:31", pave: null },
-  { km: 114.9,  place: "Briastre (sector)",       time: "13:32", pave: { num: 26, name: "Briastre", len: "843 m" }},
-  { km: 115.7,  place: "Solesmes",               time: "13:33", pave: null },
-  { km: 123.7,  place: "Solesmes → Haussy",      time: "13:43", pave: { num: 25, name: "Solesmes à Haussy", len: "863 m" }},
-  { km: 124.5,  place: "Haussy",                 time: "13:44", pave: null },
-  { km: 130.5,  place: "Saulzoir → Verchain",    time: "13:52", pave: { num: 24, name: "Saulzoir à Verchain-Maugré", len: "1209 m" }},
-  { km: 131.7,  place: "Verchain-Maugré",        time: "13:53", pave: null },
-  { km: 134.9,  place: "Verchain → Quérénaing",  time: "13:57", pave: { num: 23, name: "Verchain-Maugré à Quérénaing", len: "1577 m" }},
-  { km: 136.4,  place: "Quérénaing",             time: "13:59", pave: null },
-  { km: 137.5,  place: "Quérénaing → Maing",     time: "14:01", pave: { num: 22, name: "Quérénaing à Maing", len: "2481 m" }},
-  { km: 140.0,  place: "Maing",                  time: "14:04", pave: null },
-  { km: 140.7,  place: "Maing → Monchaux",       time: "14:05", pave: { num: 21, name: "Maing à Monchaux-sur-Écaillon", len: "1563 m" }},
-  { km: 142.3,  place: "Monchaux-sur-Écaillon",  time: "14:07", pave: null },
-  { km: 152.3,  place: "Haveluy",                time: "14:19", pave: null },
-  { km: 153.6,  place: "Haveluy → Wallers",      time: "14:21", pave: { num: 20, name: "Haveluy à Wallers", len: "2500 m" }},
-  { km: 156.1,  place: "Wallers",                time: "14:24", pave: null },
-  { km: 163.0,  place: "Trouée d'Arenberg",      time: "14:33", pave: { num: 19, name: "Trouée d'Arenberg", len: "2331 m", special: true }},
-  { km: 165.4,  place: "After Arenberg",         time: "14:36", pave: null },
-  { km: 169.1,  place: "Wallers → Hélesmes",     time: "14:41", pave: { num: 18, name: "Wallers à Hélesmes", len: "1636 m" }},
-  { km: 170.7,  place: "Hélesmes",               time: "14:43", pave: null },
-  { km: 175.9,  place: "Hornaing → Wandignies",  time: "14:50", pave: { num: 17, name: "Hornaing à Wandignies", len: "3680 m" }},
-  { km: 179.6,  place: "Wandignies-Hamage",      time: "14:54", pave: null },
-  { km: 183.3,  place: "Warlaing → Brillon",     time: "14:59", pave: { num: 16, name: "Warlaing à Brillon", len: "2459 m" }},
-  { km: 185.8,  place: "Brillon",                time: "15:02", pave: null },
-  { km: 186.8,  place: "Tilloy → Sars",          time: "15:03", pave: { num: 15, name: "Tilloy à Sars-et-Rosières", len: "2380 m" }},
-  { km: 189.2,  place: "Sars-et-Rosières",       time: "15:06", pave: null },
-  { km: 193.2,  place: "Beuvry → Orchies",       time: "15:12", pave: { num: 14, name: "Beuvry-la-Forêt à Orchies", len: "1314 m" }},
-  { km: 194.5,  place: "Orchies",                time: "15:13", pave: null },
-  { km: 198.2,  place: "Orchies (sector)",       time: "15:18", pave: { num: 13, name: "Orchies", len: "1732 m" }},
-  { km: 199.9,  place: "Nomain",                 time: "15:20", pave: null },
-  { km: 204.3,  place: "Auchy → Bersée",         time: "15:26", pave: { num: 12, name: "Auchy-lez-Orchies à Bersée", len: "2656 m" }},
-  { km: 206.9,  place: "Bersée",                 time: "15:29", pave: null },
-  { km: 209.7,  place: "Mons-en-Pévèle",         time: "15:33", pave: { num: 11, name: "Mons-en-Pévèle", len: "2998 m", special: true }},
-  { km: 212.7,  place: "Mérignies",              time: "15:37", pave: null },
-  { km: 215.7,  place: "Mérignies → Avelin",     time: "15:40", pave: { num: 10, name: "Mérignies à Avelin", len: "652 m" }},
-  { km: 216.4,  place: "Avelin",                 time: "15:41", pave: null },
-  { km: 219.1,  place: "Pont-Thibault → Ennevelin", time: "15:45", pave: { num: 9, name: "Pont-Thibault à Ennevelin", len: "1384 m" }},
-  { km: 220.5,  place: "Ennevelin",              time: "15:46", pave: null },
-  { km: 224.5,  place: "Templeuve (l'Épinette)", time: "15:52", pave: { num: 8, name: "Templeuve l'Épinette", len: "216 m" }},
-  { km: 225.1,  place: "Templeuve (Moulin)",     time: "15:52", pave: { num: 8, name: "Templeuve Moulin-de-Vertain", len: "565 m" }},
-  { km: 225.6,  place: "Wachemy",                time: "15:53", pave: null },
-  { km: 231.5,  place: "Cysoing → Bourghelles",  time: "16:00", pave: { num: 7, name: "Cysoing à Bourghelles", len: "1279 m" }},
-  { km: 232.9,  place: "Bourghelles",            time: "16:02", pave: null },
-  { km: 234.0,  place: "Bourghelles → Wannehain",time: "16:04", pave: { num: 6, name: "Bourghelles à Wannehain", len: "1106 m" }},
-  { km: 235.1,  place: "Wannehain",              time: "16:05", pave: null },
-  { km: 238.4,  place: "Camphin-en-Pévèle",      time: "16:09", pave: { num: 5, name: "Camphin-en-Pévèle", len: "1790 m" }},
-  { km: 240.2,  place: "After Camphin",          time: "16:12", pave: null },
-  { km: 241.2,  place: "Carrefour de l'Arbre",   time: "16:13", pave: { num: 4, name: "Carrefour de l'Arbre", len: "2109 m", special: true }},
-  { km: 243.3,  place: "After Carrefour",        time: "16:16", pave: null },
-  { km: 243.5,  place: "Gruson",                 time: "16:16", pave: { num: 3, name: "Gruson", len: "1081 m" }},
-  { km: 244.5,  place: "Gruson",                 time: "16:17", pave: null },
-  { km: 250.2,  place: "Willems → Hem",          time: "16:24", pave: { num: 2, name: "Willems à Hem", len: "1393 m" }},
-  { km: 251.6,  place: "Hem",                    time: "16:26", pave: null },
-  { km: 255.8,  place: "Roubaix approach",       time: "16:32", pave: null },
-  { km: 256.9,  place: "Roubaix (Crupelandt)",   time: "16:33", pave: { num: 1, name: "Espace Charles Crupelandt", len: "263 m" }},
-  { km: 257.2,  place: "Vélodrome entrance",     time: "16:34", pave: null },
-  { km: 258.3,  place: "Roubaix – Vélodrome",    time: "16:35", pave: null },
-];
+let weatherLoaded = false;
+let weatherError = false;
+const weatherCache = {};
+let currentKm = 0;
 
-// Pavé sectors for the track rendering
-const paveSectors = [
-  { num: 30, start: 95.8,  end: 98.0  },
-  { num: 29, start: 102.3, end: 104.1 },
-  { num: 28, start: 104.9, end: 108.6 },
-  { num: 27, start: 111.1, end: 114.1 },
-  { num: 26, start: 114.9, end: 115.7 },
-  { num: 25, start: 123.7, end: 124.5 },
-  { num: 24, start: 130.5, end: 131.7 },
-  { num: 23, start: 134.9, end: 136.4 },
-  { num: 22, start: 137.5, end: 140.0 },
-  { num: 21, start: 140.7, end: 142.3 },
-  { num: 20, start: 153.6, end: 156.1 },
-  { num: 19, start: 163.0, end: 165.4 },
-  { num: 18, start: 169.1, end: 170.7 },
-  { num: 17, start: 175.9, end: 179.6 },
-  { num: 16, start: 183.3, end: 185.8 },
-  { num: 15, start: 186.8, end: 189.2 },
-  { num: 14, start: 193.2, end: 194.5 },
-  { num: 13, start: 198.2, end: 199.9 },
-  { num: 12, start: 204.3, end: 206.9 },
-  { num: 11, start: 209.7, end: 212.7 },
-  { num: 10, start: 215.7, end: 216.4 },
-  { num:  9, start: 219.1, end: 220.5 },
-  { num:  8, start: 224.5, end: 225.6 },
-  { num:  7, start: 231.5, end: 232.9 },
-  { num:  6, start: 234.0, end: 235.1 },
-  { num:  5, start: 238.4, end: 240.2 },
-  { num:  4, start: 241.2, end: 243.3 },
-  { num:  3, start: 243.5, end: 244.5 },
-  { num:  2, start: 250.2, end: 251.6 },
-  { num:  1, start: 256.9, end: 257.2 },
-];
-
-// Fake weather data per km zone
-function getFakeWeather(km) {
-  if (km < 50)  return { icon: "⛅", main: "Partly Cloudy",   desc: "Dry roads, mild tailwind",           temp: "8°C",  wind: "18 km/h N",  rain: "0.0 mm/h", time: getTimeAt(km) };
-  if (km < 90)  return { icon: "🌥️", main: "Overcast",        desc: "Cloud building, humidity rising",    temp: "9°C",  wind: "20 km/h NE", rain: "0.1 mm/h", time: getTimeAt(km) };
-  if (km < 120) return { icon: "🌦️", main: "Drizzle",         desc: "Light drizzle — cobbles getting slick", temp: "9°C", wind: "22 km/h NE", rain: "0.8 mm/h", time: getTimeAt(km) };
-  if (km < 165) return { icon: "🌧️", main: "Light Rain",      desc: "Wet cobbles — high crash risk in sectors", temp: "9°C", wind: "24 km/h E", rain: "2.4 mm/h", time: getTimeAt(km) };
-  if (km < 210) return { icon: "🌧️", main: "Moderate Rain",   desc: "Heavy patches — pavé is a nightmare",  temp: "8°C", wind: "26 km/h E",  rain: "4.1 mm/h", time: getTimeAt(km) };
-  if (km < 245) return { icon: "⛈️", main: "Heavy Showers",   desc: "Arenberg mud, maximum chaos",          temp: "7°C", wind: "30 km/h SE", rain: "7.2 mm/h", time: getTimeAt(km) };
-  return         { icon: "🌧️", main: "Rain",               desc: "Sprint to the velodrome in the wet",   temp: "8°C", wind: "22 km/h SE", rain: "3.8 mm/h", time: getTimeAt(km) };
+// ===================== DATE CALCULATION =====================
+function getParisRoubaixDate(year) {
+  let d = new Date(year, 3, 1);
+  let day = d.getDay();
+  let firstSunday = (day === 0) ? 1 : (8 - day);
+  return new Date(year, 3, firstSunday + 7); // Second Sunday of April
 }
 
-function getTimeAt(km) {
-  // Interpolate time from waypoints
-  let prev = waypoints[0], next = waypoints[waypoints.length - 1];
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    if (km >= waypoints[i].km && km <= waypoints[i+1].km) {
-      prev = waypoints[i]; next = waypoints[i+1]; break;
+function getNextRace() {
+  const now = new Date();
+  let year = now.getFullYear();
+  let raceDate = getParisRoubaixDate(year);
+  if (now > new Date(raceDate.getTime() + 24 * 60 * 60 * 1000)) { year++; raceDate = getParisRoubaixDate(year); }
+  return raceDate;
+}
+
+const NEXT_RACE = getNextRace();
+const RACE_DATE_STR = NEXT_RACE.toLocaleDateString('he-IL').replace(/\//g, '.');
+
+document.getElementById('header-date-big').textContent = RACE_DATE_STR;
+document.getElementById('cd-full-date').textContent = RACE_DATE_STR;
+document.getElementById('footer-year').textContent = new Date().getFullYear();
+document.getElementById('header-date-label').textContent += ` · ${NEXT_RACE.getFullYear()}`;
+
+// ===================== DATA FETCHING =====================
+async function loadExternalData() {
+  try {
+    // 1. Fetch JSON Timetable
+    const timeRes = await fetch('timetable.json');
+    if (!timeRes.ok) throw new Error("Could not load timetable.json");
+    const timeData = await timeRes.json();
+    
+    let activeSector = null;
+    let sectorCount = 0;
+
+    timeData.forEach(row => {
+      const km = parseFloat(row["From the start"]);
+      if (isNaN(km)) return;
+      
+      // Close active sector
+      if (activeSector && activeSector.end === null) {
+        activeSector.end = km;
+        paveSectors.push(activeSector);
+        activeSector = null;
+      }
+
+      let paveObj = null;
+      const pRaw = row["Pave Sectour"] || row["Pave Sector"];
+      if (pRaw && pRaw.toString().trim() !== "") {
+        const num = parseInt(pRaw);
+        const stars = parseInt(row["Stars"] || row["stars"]) || 3;
+        const lenStr = row["Length"] || row["length"] || "N/A";
+        paveObj = { num, stars, name: row["Place"], len: lenStr };
+        activeSector = { num, start: km, end: null };
+        sectorCount++;
+      }
+      
+      waypoints.push({ km: km, place: row["Place"], time: row["45km/h"] || row["47km/h"] || "12:00", pave: paveObj });
+    });
+
+    if (activeSector && activeSector.end === null) {
+      activeSector.end = waypoints[waypoints.length-1].km;
+      paveSectors.push(activeSector);
     }
+    TOTAL_KM = waypoints[waypoints.length - 1].km;
+
+    // Build Dynamic Key Points based on Timetable
+    const TARGET_SECTORS = [
+      { type: "start", sub: "Neutral start zone", icon: "🏁", isStart: true },
+      { type: "pave", sub: "Trouée d'Arenberg", icon: "🌲", secNum: 19 },
+      { type: "pave", sub: "Mons-en-Pévèle", icon: "⚡", secNum: 11 },
+      { type: "pave", sub: "Carrefour de l'Arbre", icon: "🌳", secNum: 4 },
+      { type: "finish", sub: "Vélodrome finish", icon: "🏆", isFinish: true }
+    ];
+    
+    TARGET_SECTORS.forEach(ts => {
+      let wp = null;
+      if (ts.isStart) wp = waypoints[0];
+      else if (ts.isFinish) wp = waypoints[waypoints.length-1];
+      else wp = waypoints.find(w => w.pave && w.pave.num === ts.secNum);
+      
+      if (wp) {
+        KEY_POINTS.push({
+          name: ts.isStart ? "Compiègne" : (ts.isFinish ? "Roubaix" : wp.pave.name),
+          type: ts.type, km: wp.km, icon: ts.icon, stars: wp.pave ? wp.pave.stars : 0,
+          sub: ts.isStart || ts.isFinish ? ts.sub : `Sector ${wp.pave.num} · ${wp.pave.len}`
+        });
+      }
+    });
+
+    // Update Header Meta
+    document.getElementById('header-stats-row').style.display = 'flex';
+    document.getElementById('stat-start').textContent = `START ${waypoints[0].time}`;
+    document.getElementById('stat-km').textContent = `${TOTAL_KM.toFixed(1)} KM`;
+    document.getElementById('stat-sectors').textContent = `${sectorCount} SECTORS`;
+    document.getElementById('header-subtitle').textContent = `L'Enfer du Nord · Weather Tracker · ${TOTAL_KM.toFixed(1)} km · ${sectorCount} Pavé Sectors`;
+    document.getElementById('sectors-title').textContent = `All ${sectorCount} Pavé Sectors`;
+
+    // 2. Fetch GeoJSON Map
+    const geoRes = await fetch('route.geojson');
+    if (!geoRes.ok) throw new Error("Could not load route.geojson");
+    const geoData = await geoRes.json();
+    let rawCoords = [];
+    if (geoData.features && geoData.features.length > 0) rawCoords = geoData.features[0].geometry.coordinates;
+    else if (geoData.geometry) rawCoords = geoData.geometry.coordinates;
+    
+    GPX_COORDS = rawCoords.map(c => [c[1], c[0]]); // [lon, lat] -> [lat, lon]
+    TOTAL_POINTS = GPX_COORDS.length;
+
+    startApp();
+
+  } catch (error) {
+    console.error("Initialization failed:", error);
+    document.getElementById('countdown-mode').style.display = 'none';
+    document.getElementById('live-mode').style.display = 'block';
+    document.getElementById('live-mode').innerHTML = `<div style="text-align:center; padding: 5rem 2rem;"><h2>Missing Data Files</h2><p style="color:var(--dust); margin-top:1rem;">Could not load <strong>route.geojson</strong> or <strong>timetable.json</strong>.<br>Please ensure they are uploaded to the repository.</p><p style="font-family:monospace; color:var(--red); font-size:0.8rem; margin-top:1rem;">${error.message}</p></div>`;
   }
-  // Parse times
-  const t1 = timeToMin(prev.time), t2 = timeToMin(next.time);
-  const frac = next.km === prev.km ? 0 : (km - prev.km) / (next.km - prev.km);
-  const t = t1 + frac * (t2 - t1);
-  return minToTime(t);
 }
 
-function timeToMin(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
+// ===================== CORE APP LOGIC =====================
+function startApp() {
+  const now = new Date();
+  const isRaceDay = (now.toDateString() === NEXT_RACE.toDateString());
+  const diffTime = NEXT_RACE - now;
+  const isPreRace = (diffTime > 0 && diffTime < 14 * 24 * 60 * 60 * 1000);
 
-function minToTime(m) {
-  const h = Math.floor(m / 60), min = Math.round(m % 60);
-  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
-}
-
-function getNearestWaypoint(km) {
-  let best = waypoints[0], bestDist = Infinity;
-  for (const wp of waypoints) {
-    const d = Math.abs(wp.km - km);
-    if (d < bestDist) { bestDist = d; best = wp; }
+  if (isRaceDay || isPreRace) {
+    document.getElementById('live-mode').style.display = 'block';
+    setupSliderUI();
+    renderKeyPoints();
+    renderSectors();
+    initMap();
+    loadAllWeather();
+    if (isRaceDay) triggerFireworks();
+  } else {
+    document.getElementById('countdown-mode').style.display = 'block';
+    document.getElementById('cd-days').textContent = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
-  return best;
 }
 
+// Helper Functions
+function getNearestWaypoint(km) { return waypoints.reduce((prev, curr) => Math.abs(curr.km - km) < Math.abs(prev.km - km) ? curr : prev); }
 function getActivePave(km) {
   for (const s of paveSectors) {
-    if (km >= s.start && km <= s.end) return s;
+    if (km >= s.start && km <= s.end) { const wp = waypoints.find(w => w.pave && w.pave.num === s.num); return { ...s, stars: wp ? wp.pave.stars : 0, name: wp ? wp.pave.name : '' }; }
   }
   return null;
 }
 
-// ===================== RENDER KEY POINTS =====================
-const KEY_POINTS = [
-  { name: "Compiègne",          type: "start",  km: 0.0,   sub: "Neutral start zone", icon: "🏁" },
-  { name: "Trouée d'Arenberg",  type: "pave",   km: 163.0, sub: "Sector 19 · 2331m",  icon: "💀" },
-  { name: "Mons-en-Pévèle",     type: "pave",   km: 209.7, sub: "Sector 11 · 2998m",  icon: "⚡" },
-  { name: "Carrefour de l'Arbre", type: "pave", km: 241.2, sub: "Sector 4 · 2109m",   icon: "🌳" },
-  { name: "Roubaix",            type: "finish", km: 258.3, sub: "Vélodrome finish",    icon: "🏆" },
-];
+// Renderers
+function renderKeyPoints() {
+  const grid = document.getElementById('key-points-grid');
+  grid.innerHTML = '';
+  KEY_POINTS.forEach(kp => {
+    const w = getWeatherForDisplay(kp.km);
+    const card = document.createElement('div');
+    card.className = `key-card ${kp.type}`;
+    card.innerHTML = `<div class="key-card-name">${kp.icon} ${kp.name}</div>${kp.stars > 0 ? `<div style="color:var(--yellow); font-size: 0.8rem; margin: 4px 0;">${'★'.repeat(kp.stars)}</div>` : ''}<div class="key-card-sub">${kp.sub}</div><div class="key-card-km">KM ${kp.km.toFixed(1)} · ${getNearestWaypoint(kp.km).time}</div><div class="key-card-weather"><span class="weather-icon">${w.icon}</span> ${w.main} · ${w.temp}</div>`;
+    card.addEventListener('click', () => window.jumpToLocation(kp.km, 13));
+    grid.appendChild(card);
+  });
+}
 
-const keyGrid = document.getElementById('key-points-grid');
-KEY_POINTS.forEach(kp => {
-  const w = getFakeWeather(kp.km);
-  const card = document.createElement('div');
-  card.className = `key-card ${kp.type}`;
-  card.innerHTML = `
-    <div class="key-card-name">${kp.icon} ${kp.name}</div>
-    <div class="key-card-sub">${kp.sub}</div>
-    <div class="key-card-km">KM ${kp.km.toFixed(1)} · ${getTimeAt(kp.km)}</div>
-    <div class="key-card-weather"><span class="weather-icon">${w.icon}</span> ${w.main} · ${w.temp}</div>
-  `;
-  card.addEventListener('click', () => setSlider(kp.km));
-  keyGrid.appendChild(card);
-});
+function renderSectors() {
+  const grid = document.getElementById('sectors-grid');
+  grid.innerHTML = '';
+  waypoints.filter(w => w.pave).forEach(wp => {
+    const w = getWeatherForDisplay(wp.km);
+    const row = document.createElement('div');
+    row.className = 'sector-row';
+    row.innerHTML = `<div class="sector-num">${wp.pave.num}</div><div><div class="sector-name">${wp.pave.name}</div><div style="color:var(--yellow); font-size: 0.75rem; margin-top: 2px;">${'★'.repeat(wp.pave.stars)}</div><div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp}</div></div><div class="sector-km"><div>KM ${wp.km.toFixed(1)}</div><div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div></div>`;
+    row.addEventListener('click', () => window.jumpToLocation(wp.km, 14));
+    grid.appendChild(row);
+  });
+}
 
-// ===================== RENDER SECTORS LIST =====================
-const sectorsGrid = document.getElementById('sectors-grid');
-const sectorWaypoints = waypoints.filter(wp => wp.pave);
-sectorWaypoints.forEach(wp => {
-  const w = getFakeWeather(wp.km);
-  const row = document.createElement('div');
-  row.className = 'sector-row';
-  row.innerHTML = `
-    <div class="sector-num">${wp.pave.num}</div>
-    <div>
-      <div class="sector-name">${wp.pave.name}</div>
-      <div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp} · ${w.rain} rain</div>
-    </div>
-    <div class="sector-km">
-      <div>KM ${wp.km.toFixed(1)}</div>
-      <div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div>
-    </div>
-  `;
-  row.addEventListener('click', () => setSlider(wp.km));
-  sectorsGrid.appendChild(row);
-});
+// Slider & Interactions
+function setupSliderUI() {
+  const paveSeg = document.getElementById('pave-segments');
+  paveSectors.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'pave-segment';
+    div.style.left = (s.start / TOTAL_KM) * 100 + '%';
+    div.style.width = Math.max(((s.end - s.start) / TOTAL_KM) * 100, 0.2) + '%';
+    paveSeg.appendChild(div);
+  });
+  
+  const ticks = document.getElementById('km-ticks');
+  [0, 50, 100, 150, 200, Math.floor(TOTAL_KM)].forEach(km => {
+    const tick = document.createElement('div');
+    tick.className = 'km-tick';
+    tick.style.left = (km / TOTAL_KM * 100) + '%'; tick.textContent = km; ticks.appendChild(tick);
+  });
 
-// ===================== SLIDER / PROGRESS =====================
-const track = document.getElementById('progress-track');
-const fill = document.getElementById('progress-fill');
-const thumb = document.getElementById('progress-thumb');
-const kmDoneEl = document.getElementById('km-done');
-const kmLeftEl = document.getElementById('km-left');
-const placeNameEl = document.getElementById('place-name');
-const paveBadgeEl = document.getElementById('pave-badge');
-const timeDisplayEl = document.getElementById('time-display');
-const wIcon = document.getElementById('w-icon');
-const wMain = document.getElementById('w-main');
-const wDesc = document.getElementById('w-desc');
-const wTemp = document.getElementById('w-temp');
-const wWind = document.getElementById('w-wind');
-const wRain = document.getElementById('w-rain');
-const wTime = document.getElementById('w-time');
+  const track = document.getElementById('progress-track');
+  let dragging = false;
+  const updateFromEv = (e) => {
+    const rect = track.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    window.setSlider(Math.max(0, Math.min(1, (cx - rect.left) / rect.width)) * TOTAL_KM);
+  };
+  track.addEventListener('mousedown', e => { dragging = true; updateFromEv(e); });
+  track.addEventListener('touchstart', e => { dragging = true; updateFromEv(e); }, {passive:true});
+  document.addEventListener('mousemove', e => { if(dragging) updateFromEv(e); });
+  document.addEventListener('touchmove', e => { if(dragging) updateFromEv(e); }, {passive:true});
+  document.addEventListener('mouseup', () => dragging = false);
+  document.addEventListener('touchend', () => dragging = false);
+}
 
-// Build pavé segments on track
-const paveSeg = document.getElementById('pave-segments');
-paveSectors.forEach(s => {
-  const div = document.createElement('div');
-  div.className = 'pave-segment';
-  const left = (s.start / TOTAL_KM) * 100;
-  const width = ((s.end - s.start) / TOTAL_KM) * 100;
-  div.style.left = left + '%';
-  div.style.width = Math.max(width, 0.15) + '%';
-  paveSeg.appendChild(div);
-});
-
-// Build km ticks
-const ticks = document.getElementById('km-ticks');
-[0, 50, 100, 150, 200, 258.3].forEach(km => {
-  const tick = document.createElement('div');
-  tick.className = 'km-tick';
-  tick.style.left = (km / TOTAL_KM * 100) + '%';
-  tick.textContent = km === 258.3 ? '258' : km;
-  ticks.appendChild(tick);
-});
-
-let currentKm = 0;
-
-function setSlider(km) {
-  km = Math.max(0, Math.min(TOTAL_KM, km));
+window.setSlider = function(km) {
   currentKm = km;
   const pct = (km / TOTAL_KM) * 100;
-  fill.style.width = pct + '%';
-  thumb.style.left = pct + '%';
-  kmDoneEl.textContent = km.toFixed(1);
-  kmLeftEl.textContent = (TOTAL_KM - km).toFixed(1);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-thumb').style.left = pct + '%';
+  document.getElementById('km-done').textContent = km.toFixed(1);
+  document.getElementById('km-left').textContent = (TOTAL_KM - km).toFixed(1);
 
   const wp = getNearestWaypoint(km);
-  placeNameEl.textContent = wp.place.toUpperCase();
-  timeDisplayEl.textContent = wp.time;
+  document.getElementById('place-name').textContent = wp.place.toUpperCase();
+  document.getElementById('time-display').textContent = wp.time;
 
   const pave = getActivePave(km);
+  const thumb = document.getElementById('progress-thumb');
+  const badge = document.getElementById('pave-badge');
   if (pave) {
-    paveBadgeEl.textContent = `Secteur ${pave.num} · Pavé`;
-    paveBadgeEl.classList.add('visible');
-    thumb.classList.add('in-pave');
-    triggerMudEffect();
+    badge.textContent = `Secteur ${pave.num} · ${'★'.repeat(pave.stars || 0)}`;
+    badge.classList.add('visible'); thumb.classList.add('in-pave');
   } else {
-    paveBadgeEl.classList.remove('visible');
-    thumb.classList.remove('in-pave');
+    badge.classList.remove('visible'); thumb.classList.remove('in-pave');
   }
 
-  const w = getFakeWeather(km);
-  wIcon.textContent = w.icon;
-  wMain.textContent = w.main;
-  wDesc.textContent = w.desc;
-  wTemp.textContent = w.temp;
-  wWind.textContent = w.wind;
-  wRain.textContent = w.rain;
-  wTime.textContent = w.time;
+  const w = getWeatherForDisplay(km);
+  document.getElementById('w-icon').textContent = w.icon;
+  document.getElementById('w-main').textContent = w.main;
+  document.getElementById('w-desc').textContent = w.desc;
+  document.getElementById('w-temp').textContent = w.temp;
+  document.getElementById('w-wind').textContent = w.wind;
+  document.getElementById('w-rain').textContent = w.rain;
+  document.getElementById('w-time').textContent = w.time;
 
-  // Update rain intensity
-  updateRain(km);
-  // Update map rider
+  const commentary = document.getElementById('mud-commentary');
+  if (pave && w._rw) {
+    commentary.classList.add('visible');
+    document.getElementById('mud-text').innerHTML = getMudCommentary(pave, w._rw);
+  } else {
+    commentary.classList.remove('visible');
+  }
+
+  updateRainEffect(w._rw ? w._rw.precip : 0);
   if (window.updateMapRider) window.updateMapRider(km, !!pave);
-}
+};
 
-// Dragging
-let dragging = false;
-
-function getKmFromEvent(e) {
-  const rect = track.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-  return frac * TOTAL_KM;
-}
-
-track.addEventListener('mousedown', e => { dragging = true; setSlider(getKmFromEvent(e)); });
-track.addEventListener('touchstart', e => { dragging = true; setSlider(getKmFromEvent(e)); }, { passive: true });
-document.addEventListener('mousemove', e => { if (dragging) setSlider(getKmFromEvent(e)); });
-document.addEventListener('touchmove', e => { if (dragging) setSlider(getKmFromEvent(e)); }, { passive: true });
-document.addEventListener('mouseup', () => { dragging = false; });
-document.addEventListener('touchend', () => { dragging = false; });
-
-// ===================== RAIN EFFECT =====================
-const canvas = document.getElementById('rain-canvas');
-const ctx = canvas.getContext('2d');
-let raindrops = [];
-let rainAnimId = null;
-let rainIntensity = 0;
-
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-function createRaindrop() {
-  return {
-    x: Math.random() * canvas.width,
-    y: Math.random() * -canvas.height,
-    len: 12 + Math.random() * 20,
-    speed: 8 + Math.random() * 8,
-    opacity: 0.3 + Math.random() * 0.4,
-  };
-}
-
-function animateRain() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = 'rgba(122, 179, 200, 0.6)';
-  ctx.lineWidth = 0.8;
-
-  for (let d of raindrops) {
-    ctx.beginPath();
-    ctx.globalAlpha = d.opacity;
-    ctx.moveTo(d.x, d.y);
-    ctx.lineTo(d.x - 2, d.y + d.len);
-    ctx.stroke();
-    d.y += d.speed;
-    d.x -= 1;
-    if (d.y > canvas.height) {
-      d.y = -d.len;
-      d.x = Math.random() * canvas.width;
-    }
+window.jumpToLocation = function(km, zoom) {
+  setSlider(km);
+  if (window.raceMap) {
+    const idx = Math.min(Math.floor((km / TOTAL_KM) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+    window.raceMap.setView(GPX_COORDS[idx], zoom, { animate: true });
   }
-  ctx.globalAlpha = 1;
-  if (rainIntensity > 0) rainAnimId = requestAnimationFrame(animateRain);
-}
+};
 
-function updateRain(km) {
-  let intensity = 0;
-  if (km >= 90 && km < 120)  intensity = 0.2;
-  else if (km >= 120 && km < 165) intensity = 0.5;
-  else if (km >= 165 && km < 210) intensity = 0.7;
-  else if (km >= 210 && km < 245) intensity = 1.0;
-  else if (km >= 245) intensity = 0.6;
-
-  rainIntensity = intensity;
-  canvas.style.opacity = intensity * 0.7;
-
-  const targetCount = Math.floor(intensity * 200);
-  while (raindrops.length < targetCount) raindrops.push(createRaindrop());
-  raindrops.length = Math.max(raindrops.length, targetCount);
-  if (targetCount > 0 && !rainAnimId) { animateRain(); }
-  if (targetCount === 0) { ctx.clearRect(0, 0, canvas.width, canvas.height); rainAnimId = null; }
-}
-
-// ===================== MUD EFFECT =====================
-function triggerMudEffect() {
-  const count = 3 + Math.floor(Math.random() * 5);
-  for (let i = 0; i < count; i++) {
-    const drop = document.createElement('div');
-    drop.className = 'mud-drop';
-    const size = 4 + Math.random() * 12;
-    drop.style.width = size + 'px';
-    drop.style.height = size * (0.5 + Math.random() * 0.8) + 'px';
-    drop.style.left = (10 + Math.random() * 80) + 'vw';
-    drop.style.top = (20 + Math.random() * 60) + 'vh';
-    drop.style.borderRadius = `${30 + Math.random()*40}% ${40+Math.random()*30}% ${35+Math.random()*35}% ${30+Math.random()*40}%`;
-    document.body.appendChild(drop);
-    setTimeout(() => drop.remove(), 2000);
-  }
-}
-
-// Init at start
-setSlider(0);
-
-
-
-// ===================== REAL WEATHER FROM OPEN-METEO =====================
-const WEATHER_POINTS = [
-  [0.0,   49.44708, 2.89949],
-  [19.4,  49.74483, 3.07086],
-  [43.9,  49.99274, 3.45094],
-  [69.7,  50.16332, 3.43560],
-  [95.6,  50.24197, 3.44658],
-  [121.4, 50.32157, 3.40902],
-  [147.2, 50.37523, 3.35157],
-  [162.7, 50.42529, 3.32251],
-  [188.6, 50.48909, 3.17512],
-  [214.4, 50.54231, 3.18451],
-  [235.1, 50.59484, 3.24313],
-  [250.6, 50.64656, 3.19561],
-  [258.3, 50.67804, 3.20633],
-];
-
-const weatherCache = {};
-let weatherLoaded = false;
-let weatherError = false;
-
-function wmoToLabel(code) {
-  if (code === 0) return { icon: '\u2600\ufe0f', label: 'Clear' };
-  if (code <= 2)  return { icon: '\u26c5', label: 'Partly Cloudy' };
-  if (code <= 3)  return { icon: '\ud83c\udf25\ufe0f', label: 'Overcast' };
-  if (code <= 49) return { icon: '\ud83c\udf2b\ufe0f', label: 'Foggy' };
-  if (code <= 55) return { icon: '\ud83c\udf26\ufe0f', label: 'Drizzle' };
-  if (code <= 67) return { icon: '\ud83c\udf27\ufe0f', label: 'Rain' };
-  if (code <= 77) return { icon: '\ud83c\udf28\ufe0f', label: 'Snow' };
-  if (code <= 82) return { icon: '\ud83c\udf27\ufe0f', label: 'Rain Showers' };
-  if (code <= 86) return { icon: '\ud83c\udf28\ufe0f', label: 'Snow Showers' };
-  if (code <= 99) return { icon: '\u26c8\ufe0f', label: 'Thunderstorm' };
-  return { icon: '\ud83c\udf21\ufe0f', label: 'Unknown' };
-}
-
-function windDirLabel(deg) {
-  const dirs = ['N','NE','E','SE','S','SW','W','NW'];
-  return dirs[Math.round(deg / 45) % 8];
-}
+// ===================== WEATHER API =====================
+function getFakeWeather(km) { return { icon: "⛅", main: "Partly Cloudy", desc: "Simulated Data", temp: "11°C", wind: "15 km/h E", rain: "0.0 mm/h", time: getNearestWaypoint(km).time }; }
 
 async function fetchPointWeather(ptIdx) {
   const [km, lat, lon] = WEATHER_POINTS[ptIdx];
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code,precipitation_probability` +
-    `&timezone=Europe%2FParis&start_date=2026-04-11&end_date=2026-04-13`;
+  const raceDateStr = NEXT_RACE.toISOString().split('T')[0];
+  const prevDate = new Date(NEXT_RACE.getTime() - 24*60*60*1000);
+  const prevDateStr = prevDate.toISOString().split('T')[0];
+  
+  const diffDays = Math.ceil((NEXT_RACE - new Date()) / (1000 * 60 * 60 * 24));
+  let params = 'temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code';
+  if (diffDays <= 7) params += ',precipitation_probability';
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&timezone=Europe%2FParis&start_date=${prevDateStr}&end_date=${raceDateStr}`;
+  
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const data = await resp.json();
-  const times = data.hourly.time;
-  const temps  = data.hourly.temperature_2m;
-  const precip = data.hourly.precipitation;
-  const wind   = data.hourly.wind_speed_10m;
-  const wdir   = data.hourly.wind_direction_10m;
-  const wcode  = data.hourly.weather_code;
-  const pprob  = data.hourly.precipitation_probability;
-  const byHour = {};
-  const prevDayPrecip = [];
-  times.forEach((t, i) => {
-    if (t.startsWith('2026-04-12')) {
-      const h = parseInt(t.slice(11, 13));
-      byHour[h] = { temp: temps[i], precip: precip[i], wind: wind[i], wdir: wdir[i], wcode: wcode[i], pprob: pprob[i] };
-    }
-    if (t.startsWith('2026-04-11') && precip[i] != null) prevDayPrecip.push(precip[i]);
+  const byHour = {}; let prevRain = 0;
+
+  data.hourly.time.forEach((t, i) => {
+     if (t.startsWith(raceDateStr)) {
+         byHour[parseInt(t.slice(11, 13))] = { temp: data.hourly.temperature_2m[i], precip: data.hourly.precipitation[i], wind: data.hourly.wind_speed_10m[i], wdir: data.hourly.wind_direction_10m[i], wcode: data.hourly.weather_code[i], pprob: data.hourly.precipitation_probability ? data.hourly.precipitation_probability[i] : 0 };
+     } else if (t.startsWith(prevDateStr) && data.hourly.precipitation[i]) {
+         prevRain += data.hourly.precipitation[i];
+     }
   });
-  const prevDayTotal = prevDayPrecip.reduce((a, b) => a + b, 0);
-  weatherCache[ptIdx] = { byHour, prevDayTotal };
+  weatherCache[ptIdx] = { byHour, prevDayTotal: prevRain };
 }
 
 async function loadAllWeather() {
-  const dot = document.getElementById('weather-dot');
-  const statusText = document.getElementById('weather-status-text');
-  dot.className = 'weather-status-dot loading';
-  statusText.textContent = 'Fetching live forecast for April 12\u2026';
+  document.getElementById('weather-dot').className = 'weather-status-dot loading';
+  document.getElementById('weather-status-text').textContent = 'Fetching live forecast...';
   try {
     await Promise.all(WEATHER_POINTS.map((_, i) => fetchPointWeather(i)));
     weatherLoaded = true;
-    dot.className = 'weather-status-dot';
-    statusText.textContent = 'Live forecast \u00b7 Open-Meteo \u00b7 April 12, 2026';
-    setSlider(currentKm);
+    document.getElementById('weather-dot').className = 'weather-status-dot';
+    document.getElementById('weather-status-text').textContent = `Live forecast · Open-Meteo · ${RACE_DATE_STR}`;
+
+    let maxHell = 0, maxRain = 0, maxWind = 0;
+    WEATHER_POINTS.forEach(pt => {
+      const rw = getRealWeather(pt[0], "14:00");
+      if (rw) {
+         maxHell = Math.max(maxHell, computeHellIndex(rw));
+         maxRain = Math.max(maxRain, rw.precip);
+         maxWind = Math.max(maxWind, rw.wind);
+      }
+    });
+
+    document.getElementById('hell-fill').style.width = maxHell + '%';
+    const verdict = maxHell < 40 ? "FAST & DUSTY" : (maxHell < 72 ? "MUDDY & EPIC" : "FULL HELL 🔥");
+    document.getElementById('hell-verdict').textContent = verdict;
+    document.getElementById('hell-verdict').className = 'hell-verdict ' + (maxHell > 60 ? 'epic' : 'dry');
+    
+    document.getElementById('hell-summary-1').textContent = maxRain > 0.5 ? '🌧️ Rain expected on route' : '☀️ Dry race expected';
+    document.getElementById('hell-summary-2').textContent = maxWind > 20 ? '🌪️ Crosswinds in open sectors' : '💧 Watch for slick cobbles';
+
+    renderKeyPoints(); renderSectors(); setSlider(currentKm);
   } catch (e) {
     weatherError = true;
-    dot.className = 'weather-status-dot error';
-    statusText.textContent = 'Forecast unavailable \u2014 showing simulated data';
-    console.warn('Weather fetch failed:', e);
+    document.getElementById('weather-status-text').textContent = 'Forecast Error (Simulated)';
+    document.getElementById('hell-verdict').textContent = "OFFLINE";
   }
 }
 
 function getRealWeather(km, timeStr) {
   if (!weatherLoaded) return null;
   let lo = 0, hi = WEATHER_POINTS.length - 1;
-  for (let i = 0; i < WEATHER_POINTS.length - 1; i++) {
-    if (km >= WEATHER_POINTS[i][0] && km <= WEATHER_POINTS[i+1][0]) { lo = i; hi = i + 1; break; }
-  }
-  const hour = parseInt(timeStr.split(':')[0]);
-  function ptData(idx) {
-    const d = weatherCache[idx];
-    if (!d) return null;
-    return d.byHour[hour] || d.byHour[hour - 1] || d.byHour[hour + 1] || null;
-  }
-  const dLo = ptData(lo), dHi = ptData(hi);
-  if (!dLo && !dHi) return null;
-  if (!dLo) return { ...dHi, prevRain: weatherCache[hi]?.prevDayTotal || 0 };
-  if (!dHi) return { ...dLo, prevRain: weatherCache[lo]?.prevDayTotal || 0 };
-  const span = WEATHER_POINTS[hi][0] - WEATHER_POINTS[lo][0];
-  const frac = span > 0 ? (km - WEATHER_POINTS[lo][0]) / span : 0;
+  for (let i = 0; i < WEATHER_POINTS.length - 1; i++) { if (km >= WEATHER_POINTS[i][0] && km <= WEATHER_POINTS[i+1][0]) { lo = i; hi = i + 1; break; } }
+  const h = parseInt(timeStr.split(':')[0]);
+  const dLo = weatherCache[lo]?.byHour[h] || weatherCache[lo]?.byHour[h-1];
+  const dHi = weatherCache[hi]?.byHour[h] || weatherCache[hi]?.byHour[h-1];
+  if (!dLo || !dHi) return null;
+  const frac = (km - WEATHER_POINTS[lo][0]) / (WEATHER_POINTS[hi][0] - WEATHER_POINTS[lo][0]);
   return {
-    temp:    dLo.temp  + frac * (dHi.temp  - dLo.temp),
-    precip:  dLo.precip + frac * (dHi.precip - dLo.precip),
-    wind:    dLo.wind  + frac * (dHi.wind  - dLo.wind),
-    wdir:    dLo.wdir  + frac * (dHi.wdir  - dLo.wdir),
-    pprob:   dLo.pprob + frac * (dHi.pprob - dLo.pprob),
-    wcode:   frac < 0.5 ? dLo.wcode : dHi.wcode,
-    prevRain: (weatherCache[lo]?.prevDayTotal || 0) * (1-frac) + (weatherCache[hi]?.prevDayTotal || 0) * frac,
+    temp: dLo.temp + frac * (dHi.temp - dLo.temp), precip: dLo.precip + frac * (dHi.precip - dLo.precip),
+    wind: dLo.wind + frac * (dHi.wind - dLo.wind), wdir: dLo.wdir, pprob: dLo.pprob,
+    wcode: frac < 0.5 ? dLo.wcode : dHi.wcode, prevRain: weatherCache[lo].prevDayTotal * (1-frac) + weatherCache[hi].prevDayTotal * frac
   };
 }
 
-function computeHellIndex(rw) {
-  if (!rw) return 50;
-  let s = 0;
-  s += Math.min((rw.precip || 0) * 40, 35);
-  s += Math.min((rw.pprob || 0) * 0.25, 20);
-  s += Math.min((rw.prevRain || 0) * 3, 25);
-  s += Math.min(((rw.wind || 0) - 10) * 0.5, 10);
-  if ((rw.temp || 10) < 8) s += 5;
-  return Math.min(100, Math.max(0, s));
-}
-
-function hellVerdict(idx) {
-  if (idx < 20) return { text: 'Dry', cls: 'dry' };
-  if (idx < 40) return { text: 'Dusty', cls: 'dry' };
-  if (idx < 55) return { text: 'Damp', cls: '' };
-  if (idx < 72) return { text: 'Muddy & Epic', cls: 'muddy' };
-  return { text: 'Full Hell \ud83d\udd25', cls: 'epic' };
-}
-
-function getMudCommentary(sectorName, rw, pave) {
-  if (!pave || !rw) return null;
-  const { precip, prevRain, temp, wind, pprob } = rw;
-  const lines = [];
-  if ((precip || 0) > 3) {
-    lines.push(`<strong>Heavy rain</strong> at ${precip.toFixed(1)} mm/h \u2014 the cobbles will be <strong>treacherously slick</strong>.`);
-  } else if ((precip || 0) > 0.5) {
-    lines.push(`<strong>Rain</strong> at ${precip.toFixed(1)} mm/h \u2014 wet stone, expect <strong>crashes</strong>.`);
-  } else if ((precip || 0) > 0.1) {
-    lines.push(`<strong>Light drizzle</strong> (${precip.toFixed(1)} mm/h) \u2014 cobbles beginning to get damp.`);
-  } else if ((pprob || 0) > 50) {
-    lines.push(`Rain probability <strong>${Math.round(pprob)}%</strong> \u2014 riders will be gambling on tyres.`);
-  } else {
-    lines.push(`<strong>Dry</strong> at this sector \u2014 faster, but the cobbles still punish any mistake.`);
-  }
-  if ((prevRain || 0) > 10) {
-    lines.push(`Previous day saw <strong>${prevRain.toFixed(0)} mm</strong> \u2014 the runoff has nowhere to go and the sector is likely deeply <strong>muddy</strong>.`);
-  } else if ((prevRain || 0) > 3) {
-    lines.push(`Yesterday\u2019s ${prevRain.toFixed(0)} mm left damp ground \u2014 expect mud in the low sections.`);
-  }
-  if ((temp || 10) < 8) lines.push(`At ${temp.toFixed(1)}\u00b0C, <strong>cold hands</strong> and numb brakes add to the difficulty.`);
-  if ((wind || 0) > 25) lines.push(`<strong>${wind.toFixed(0)} km/h winds</strong> \u2014 cross-gusts through exposed sections.`);
-  const legendary = { 19: "The Trouée d'Arenberg cuts through a forest — narrow, deafening, utterly unforgiving in any conditions.", 11: "Mons-en-Pévèle at 3 km long is where races shatter. Any moisture makes the crowned surface impossible to hold a line.", 4: "Carrefour de l'Arbre with 17 km to go — the winner often attacks here. One slip ends your race." };
-  if (legendary[pave.num]) lines.push(legendary[pave.num]);
-  return lines.join(' ');
-}
-
 function getWeatherForDisplay(km) {
-  const time = getTimeAt(km);
+  const time = getNearestWaypoint(km).time;
   if (weatherLoaded) {
     const rw = getRealWeather(km, time);
     if (rw) {
-      const { icon, label } = wmoToLabel(rw.wcode);
-      const pave = getActivePave(km);
-      let desc = '';
-      if ((rw.precip || 0) > 2) desc = 'Heavy rain \u2014 wet cobbles, high crash risk';
-      else if ((rw.precip || 0) > 0.5) desc = 'Rain \u2014 surfaces slippery, take care on pav\u00e9';
-      else if ((rw.precip || 0) > 0.1) desc = 'Light drizzle \u2014 cobbles getting damp';
-      else if ((rw.pprob || 0) > 50) desc = `Rain likely (${Math.round(rw.pprob)}% chance)`;
-else desc = pave ? 'Dry cobbles \u2014 faster but still punishing' : label + ' conditions along this section';
-      return {
-        icon, main: label, desc,
-        temp: rw.temp != null ? `${rw.temp.toFixed(1)}\u00b0C` : '\u2014',
-        wind: rw.wind != null ? `${rw.wind.toFixed(0)} km/h ${windDirLabel(rw.wdir)}` : '\u2014',
-        rain: rw.precip != null ? `${rw.precip.toFixed(1)} mm/h` : '\u2014',
-        time, _rw: rw,
-      };
+      const isSnow = [71,73,75,77,85,86].includes(rw.wcode);
+      const isRain = [51,53,55,61,63,65,80,81,82].includes(rw.wcode);
+      let icon = isSnow ? '🌨️' : (isRain ? '🌧️' : (rw.wcode <= 3 ? '⛅' : '☁️'));
+      let desc = isSnow ? "Snow on cobbles!" : (rw.precip > 1 ? "Wet cobbles, crash risk" : (rw.precip > 0.1 ? "Damp surface" : "Dry sectors"));
+      const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+      const dir = dirs[Math.round(rw.wdir / 45) % 8];
+      return { icon, main: isSnow ? "Snow" : (isRain ? "Rain" : "Dry"), desc, temp: `${rw.temp.toFixed(1)}°C`, wind: `${rw.wind.toFixed(0)} km/h ${dir}`, rain: `${rw.precip.toFixed(1)} mm`, time, _rw: rw };
     }
   }
   return getFakeWeather(km);
 }
 
-// Override setSlider with real-weather version
-setSlider = function(km) {
-  km = Math.max(0, Math.min(TOTAL_KM, km));
-  currentKm = km;
-  const pct = (km / TOTAL_KM) * 100;
-  fill.style.width = pct + '%';
-  thumb.style.left = pct + '%';
-  kmDoneEl.textContent = km.toFixed(1);
-  kmLeftEl.textContent = (TOTAL_KM - km).toFixed(1);
-  const wp = getNearestWaypoint(km);
-  placeNameEl.textContent = wp.place.toUpperCase();
-  timeDisplayEl.textContent = wp.time;
-  const pave = getActivePave(km);
-  if (pave) {
-    paveBadgeEl.textContent = `Secteur ${pave.num} \u00b7 Pav\u00e9`;
-    paveBadgeEl.classList.add('visible');
-    thumb.classList.add('in-pave');
-    triggerMudEffect();
-  } else {
-    paveBadgeEl.classList.remove('visible');
-    thumb.classList.remove('in-pave');
+function computeHellIndex(rw) {
+  let s = Math.min((rw.precip || 0) * 40, 35) + Math.min((rw.pprob || 0) * 0.25, 20) + Math.min((rw.prevRain || 0) * 3, 25) + Math.min(((rw.wind || 0) - 10) * 0.5, 10);
+  if ((rw.temp || 10) < 8) s += 5;
+  return Math.min(100, Math.max(0, s));
+}
+
+function getMudCommentary(pave, rw) {
+  let txt = `<strong>Sector ${pave.num} (${pave.name})</strong>: `;
+  if (rw.precip > 2) txt += `Heavy rain (${rw.precip.toFixed(1)}mm) will make the ${pave.len} treacherous. `;
+  else if (rw.precip > 0.1) txt += `Damp cobbles. Slipping risk high. `;
+  else txt += `Dry line available. `;
+  if (rw.prevRain > 5) txt += `Standing mud expected from yesterday's rain. `;
+  return txt;
+}
+
+// ===================== EFFECTS =====================
+const canvas = document.getElementById('rain-canvas');
+const ctx = canvas.getContext('2d');
+let raindrops = [];
+function updateRainEffect(intensity) {
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  canvas.style.opacity = Math.min(intensity * 0.8, 0.7);
+  const target = Math.floor(Math.min(intensity * 100, 300));
+  raindrops = Array(target).fill().map(() => ({ x: Math.random()*canvas.width, y: Math.random()*-canvas.height, len: 10+Math.random()*20, spd: 10+Math.random()*10 }));
+}
+function drawRain() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = 'rgba(122,179,200,0.6)'; ctx.lineWidth = 1;
+  raindrops.forEach(d => { ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x-2, d.y+d.len); ctx.stroke(); d.y+=d.spd; d.x-=1; if(d.y>canvas.height){d.y=-d.len; d.x=Math.random()*canvas.width;} });
+  requestAnimationFrame(drawRain);
+}
+drawRain();
+
+function triggerFireworks() {
+  const fw = document.getElementById('fireworks-canvas');
+  const fctx = fw.getContext('2d');
+  fw.width = window.innerWidth; fw.height = window.innerHeight; fw.style.opacity = 1;
+  let particles = [];
+  setInterval(() => {
+    if(Math.random() > 0.7) return;
+    const x = Math.random() * fw.width, y = Math.random() * fw.height * 0.5, c = `hsl(${Math.random()*360},100%,50%)`;
+    for(let i=0; i<40; i++) particles.push({x,y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,age:0,c});
+  }, 800);
+  function animFW() {
+    fctx.clearRect(0,0,fw.width,fw.height);
+    particles.forEach((p,i) => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.age++; fctx.fillStyle=p.c; fctx.globalAlpha=1-(p.age/50); fctx.beginPath(); fctx.arc(p.x,p.y,2,0,Math.PI*2); fctx.fill(); if(p.age>50) particles.splice(i,1); });
+    fctx.globalAlpha=1; requestAnimationFrame(animFW);
   }
-  const w = getWeatherForDisplay(km);
-  wIcon.textContent = w.icon;
-  wMain.textContent = w.main;
-  wDesc.textContent = w.desc;
-  wTemp.textContent = w.temp;
-  wWind.textContent = w.wind;
-  wRain.textContent = w.rain;
-  wTime.textContent = w.time;
+  animFW();
+}
 
-  const rw = (w._rw) || null;
-  const hellIdx = (weatherLoaded && rw) ? computeHellIndex(rw) : 72;
-  document.getElementById('hell-fill').style.width = hellIdx + '%';
-  const v = hellVerdict(hellIdx);
-  const verdictEl = document.getElementById('hell-verdict');
-  verdictEl.textContent = v.text;
-  verdictEl.className = 'hell-verdict ' + v.cls;
+// ===================== MAP (LEAFLET) =====================
+function initMap() {
+  window.raceMap = L.map('route-map', { center: [50.1, 3.2], zoom: 9 });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CARTO' }).addTo(window.raceMap);
+  L.polyline(GPX_COORDS, { color: '#7ab3c8', weight: 4, opacity: 0.8 }).addTo(window.raceMap);
 
-  const commentary = document.getElementById('mud-commentary');
-  const mudText = document.getElementById('mud-text');
-  if (pave && rw) {
-    const text = getMudCommentary(wp.place, rw, pave);
-    if (text) { mudText.innerHTML = text; commentary.classList.add('visible'); }
-    else commentary.classList.remove('visible');
-  } else if (pave && !weatherLoaded) {
-    mudText.innerHTML = `<strong>Sector ${pave.num}</strong> \u2014 loading live conditions\u2026`;
-    commentary.classList.add('visible');
-  } else {
-    commentary.classList.remove('visible');
-  }
-
-  updateRain(km);
-  if (window.updateMapRider) window.updateMapRider(km, !!pave);
-};
-
-loadAllWeather();
-
-
-// ===================== MAP =====================
-const GPX_COORDS = [[49.44708,2.89949],[49.45912,2.94178],[49.46448,2.94413],[49.47741,2.95002],[49.47819,2.95049],[49.47999,2.95309],[49.481,2.954],[49.48225,2.95483],[49.48353,2.95572],[49.48545,2.95833],[49.48662,2.95829],[49.48877,2.95988],[49.48912,2.96047],[49.491,2.96374],[49.49341,2.96625],[49.49502,2.96843],[49.49699,2.97109],[49.49803,2.97177],[49.49957,2.97408],[49.50269,2.97938],[49.50503,2.98176],[49.50852,2.98317],[49.5226,2.98348],[49.52926,2.98429],[49.53745,2.98525],[49.54911,2.98668],[49.55783,2.99283],[49.55848,2.99324],[49.56093,2.99258],[49.56159,2.99181],[49.56446,2.9888],[49.56608,2.98898],[49.5667,2.98872],[49.56735,2.98768],[49.56943,2.98856],[49.57027,2.98859],[49.57123,2.98805],[49.57186,2.98747],[49.57249,2.98742],[49.5732,2.9881],[49.57433,2.9894],[49.57453,2.98974],[49.57821,2.99437],[49.57833,2.99479],[49.57869,2.99458],[49.58361,2.99673],[49.58387,2.997],[49.58576,3.0012],[49.58904,3.00247],[49.58957,3.00271],[49.59323,3.00422],[49.60608,3.01582],[49.62271,3.02943],[49.63563,3.03796],[49.64769,3.04594],[49.64934,3.04688],[49.65334,3.04935],[49.65529,3.05083],[49.65826,3.05311],[49.66031,3.05334],[49.66643,3.05467],[49.70146,3.06265],[49.70278,3.06297],[49.70662,3.06383],[49.70883,3.06455],[49.71039,3.06484],[49.72325,3.06657],[49.72334,3.06651],[49.7303,3.06744],[49.73354,3.06788],[49.73986,3.06869],[49.74185,3.06901],[49.74285,3.06901],[49.74475,3.07095],[49.74482,3.07084],[49.74722,3.07037],[49.74914,3.07084],[49.75001,3.07119],[49.75116,3.06845],[49.75146,3.06618],[49.7525,3.06605],[49.75376,3.06757],[49.759,3.07319],[49.76603,3.08791],[49.77869,3.11502],[49.78942,3.13784],[49.80848,3.17884],[49.81124,3.18464],[49.81587,3.19543],[49.8189,3.20325],[49.82677,3.24225],[49.82785,3.24736],[49.83113,3.25586],[49.83135,3.25686],[49.83669,3.26833],[49.83891,3.2731],[49.84041,3.27479],[49.84293,3.27748],[49.84358,3.27884],[49.84751,3.27957],[49.84808,3.27971],[49.84887,3.28005],[49.85238,3.28615],[49.85247,3.28663],[49.85278,3.28647],[49.85552,3.28837],[49.85699,3.28946],[49.85877,3.28979],[49.85901,3.28988],[49.86055,3.29012],[49.8632,3.29171],[49.86403,3.2923],[49.86445,3.29256],[49.86715,3.29402],[49.86948,3.29685],[49.88069,3.30451],[49.88638,3.31067],[49.88922,3.31363],[49.89004,3.31559],[49.89039,3.31797],[49.89379,3.32393],[49.89608,3.32702],[49.89651,3.32743],[49.89688,3.32756],[49.89789,3.32812],[49.90147,3.33033],[49.90472,3.33542],[49.91171,3.34499],[49.91563,3.35005],[49.91907,3.35879],[49.92024,3.36163],[49.92338,3.365],[49.92604,3.3691],[49.92818,3.37245],[49.93715,3.38709],[49.93933,3.39092],[49.94346,3.39921],[49.94403,3.40073],[49.94436,3.40101],[49.9469,3.40755],[49.94824,3.41012],[49.94931,3.41179],[49.9483,3.41317],[49.94779,3.41357],[49.9487,3.41509],[49.94906,3.41641],[49.95667,3.42967],[49.96675,3.43784],[49.96767,3.43818],[49.96872,3.43782],[49.9693,3.43829],[49.96942,3.43904],[49.96931,3.44069],[49.96949,3.44116],[49.97027,3.44101],[49.97386,3.44462],[49.97629,3.44705],[49.97647,3.44742],[49.97678,3.44746],[49.98075,3.45099],[49.9829,3.45337],[49.98453,3.45479],[49.98514,3.45515],[49.98666,3.45471],[49.98738,3.45373],[49.98875,3.45188],[49.99016,3.45196],[49.99255,3.45097],[49.99656,3.45171],[50.00087,3.45309],[50.01352,3.45737],[50.0189,3.45575],[50.02456,3.45857],[50.02984,3.46222],[50.03145,3.46326],[50.03451,3.46407],[50.03786,3.46467],[50.03989,3.46311],[50.04247,3.45755],[50.04851,3.45168],[50.04898,3.45149],[50.05029,3.45156],[50.05316,3.45016],[50.05665,3.44824],[50.06001,3.44442],[50.06103,3.44373],[50.06121,3.44264],[50.06246,3.44023],[50.0634,3.44007],[50.06601,3.44149],[50.06851,3.4434],[50.07056,3.44421],[50.07159,3.44424],[50.07265,3.44449],[50.07443,3.44544],[50.07645,3.44505],[50.07782,3.44503],[50.07951,3.44461],[50.08106,3.44354],[50.08246,3.44356],[50.08278,3.44267],[50.08398,3.44099],[50.08457,3.44117],[50.08598,3.44046],[50.08663,3.4401],[50.08898,3.44247],[50.09133,3.4457],[50.0921,3.44849],[50.09273,3.44969],[50.09391,3.45192],[50.09479,3.45315],[50.09562,3.456],[50.09622,3.45991],[50.09703,3.46331],[50.09727,3.4659],[50.09758,3.46628],[50.10052,3.46717],[50.10175,3.46782],[50.10235,3.46846],[50.10317,3.46872],[50.10402,3.46973],[50.10483,3.47051],[50.1045,3.47175],[50.10406,3.47524],[50.1053,3.47583],[50.10606,3.47596],[50.10757,3.47648],[50.10977,3.47632],[50.11091,3.47729],[50.1115,3.4774],[50.11241,3.47694],[50.11274,3.4768],[50.1161,3.47742],[50.11863,3.47754],[50.12026,3.47766],[50.1258,3.47657],[50.12515,3.46996],[50.12437,3.46699],[50.12387,3.46508],[50.12456,3.46334],[50.12982,3.46494],[50.13079,3.46481],[50.13198,3.46538],[50.13335,3.46541],[50.13779,3.4653],[50.13848,3.46517],[50.14095,3.46428],[50.1431,3.46431],[50.14457,3.46415],[50.14576,3.46347],[50.14704,3.46227],[50.14839,3.46239],[50.15043,3.46254],[50.1513,3.4626],[50.1522,3.46215],[50.15271,3.46158],[50.15308,3.46111],[50.15357,3.46053],[50.15387,3.45922],[50.15483,3.45734],[50.15606,3.45465],[50.15687,3.45099],[50.15723,3.44678],[50.15833,3.44316],[50.15919,3.44188],[50.16098,3.43986],[50.16409,3.43398],[50.1649,3.43174],[50.16678,3.43182],[50.16715,3.43198],[50.16804,3.43177],[50.16974,3.43301],[50.17291,3.43408],[50.17653,3.43538],[50.17926,3.43741],[50.18212,3.43871],[50.17925,3.44372],[50.17096,3.45689],[50.16609,3.45947],[50.16356,3.45992],[50.16038,3.46038],[50.15904,3.46035],[50.15556,3.46164],[50.15531,3.46194],[50.15423,3.46448],[50.15291,3.46653],[50.15246,3.46812],[50.15177,3.46942],[50.15094,3.47149],[50.1506,3.47379],[50.1502,3.47555],[50.14952,3.47785],[50.1487,3.48032],[50.14789,3.48194],[50.14817,3.48278],[50.14977,3.48354],[50.15132,3.48545],[50.15178,3.48707],[50.1522,3.49018],[50.15258,3.49076],[50.15342,3.49016],[50.15548,3.48898],[50.15709,3.48874],[50.15844,3.48826],[50.15962,3.48733],[50.15991,3.48868],[50.15944,3.4893],[50.15917,3.49001],[50.15819,3.49359],[50.15955,3.49851],[50.16125,3.49748],[50.1656,3.49468],[50.16651,3.49447],[50.17846,3.49879],[50.17997,3.49913],[50.18148,3.49893],[50.18304,3.49811],[50.1847,3.49763],[50.18524,3.49728],[50.18638,3.497],[50.1867,3.49714],[50.18747,3.49875],[50.18802,3.49896],[50.19083,3.49868],[50.19176,3.49883],[50.19402,3.50041],[50.19557,3.50058],[50.20097,3.50058],[50.20216,3.5],[50.20293,3.49995],[50.20865,3.50185],[50.21139,3.50256],[50.21248,3.5024],[50.21738,3.50235],[50.2183,3.50224],[50.22242,3.50246],[50.22423,3.5031],[50.22494,3.50166],[50.22486,3.49973],[50.22379,3.49434],[50.22297,3.49109],[50.22257,3.48886],[50.2213,3.48574],[50.22087,3.48431],[50.22001,3.48259],[50.21885,3.48026],[50.21966,3.47832],[50.22135,3.47627],[50.22197,3.47603],[50.22347,3.47425],[50.2238,3.47326],[50.22391,3.47079],[50.22513,3.46807],[50.22694,3.46422],[50.22756,3.463],[50.23175,3.45765],[50.23284,3.45641],[50.23321,3.4555],[50.23403,3.45226],[50.23431,3.44927],[50.23696,3.44554],[50.2397,3.4423],[50.2408,3.44225],[50.24091,3.44372],[50.24197,3.44658],[50.24409,3.45275],[50.24526,3.45401],[50.2482,3.45775],[50.24934,3.45973],[50.25123,3.46225],[50.25189,3.46296],[50.25434,3.46469],[50.25618,3.46653],[50.25788,3.46825],[50.26001,3.47084],[50.26239,3.4739],[50.26316,3.4745],[50.26432,3.47562],[50.26589,3.47569],[50.26692,3.476],[50.26764,3.47642],[50.26874,3.47668],[50.26955,3.4774],[50.27053,3.47946],[50.27107,3.48039],[50.27399,3.48388],[50.27502,3.48602],[50.27615,3.48835],[50.27698,3.48986],[50.27815,3.4913],[50.27946,3.49468],[50.28106,3.49939],[50.28195,3.50301],[50.28255,3.50678],[50.28419,3.50947],[50.28598,3.50969],[50.28772,3.50982],[50.28852,3.51002],[50.28975,3.51087],[50.2904,3.51144],[50.29083,3.51128],[50.29189,3.50743],[50.29233,3.5055],[50.2934,3.50196],[50.29452,3.49825],[50.29489,3.497],[50.29502,3.49335],[50.29629,3.49086],[50.29729,3.49019],[50.29924,3.48636],[50.30024,3.4847],[50.30219,3.48299],[50.30305,3.48161],[50.3031,3.48147],[50.30302,3.48145],[50.30257,3.48072],[50.30096,3.47688],[50.3,3.47284],[50.29818,3.46768],[50.2971,3.46488],[50.29578,3.46273],[50.29463,3.46133],[50.29494,3.46169],[50.29366,3.46037],[50.29275,3.45866],[50.28955,3.45564],[50.28818,3.45539],[50.28581,3.45561],[50.28586,3.45354],[50.28603,3.45205],[50.28547,3.44935],[50.28579,3.44911],[50.28844,3.44814],[50.28895,3.44795],[50.29085,3.44838],[50.29254,3.44828],[50.29451,3.44731],[50.29633,3.44693],[50.29961,3.44726],[50.29996,3.44756],[50.30118,3.44739],[50.30204,3.44706],[50.30283,3.44665],[50.30394,3.44686],[50.30488,3.44441],[50.30535,3.44362],[50.30643,3.44345],[50.30699,3.4418],[50.30763,3.43985],[50.30966,3.43619],[50.31089,3.43389],[50.31177,3.4319],[50.31314,3.42917],[50.31625,3.42536],[50.3173,3.42338],[50.31535,3.41608],[50.31474,3.41341],[50.31559,3.41172],[50.31651,3.41067],[50.31784,3.40975],[50.31962,3.40926],[50.32123,3.409],[50.32144,3.4091],[50.32202,3.40903],[50.32526,3.40867],[50.32595,3.40824],[50.32778,3.40614],[50.32851,3.40571],[50.33024,3.40504],[50.33318,3.40398],[50.33566,3.40347],[50.33703,3.40337],[50.33725,3.40358],[50.33752,3.40346],[50.33903,3.40298],[50.34069,3.40221],[50.34261,3.40106],[50.34307,3.40114],[50.34553,3.4019],[50.34967,3.4022],[50.35053,3.40229],[50.35259,3.40257],[50.35279,3.40083],[50.35276,3.39848],[50.35342,3.3945],[50.35381,3.39122],[50.35427,3.38246],[50.35682,3.38283],[50.35932,3.38272],[50.36096,3.38193],[50.36296,3.38211],[50.36588,3.38155],[50.36718,3.38101],[50.36825,3.38343],[50.36895,3.38504],[50.37141,3.3877],[50.37164,3.38896],[50.37224,3.38921],[50.37279,3.38965],[50.37335,3.39204],[50.37332,3.39336],[50.3738,3.39668],[50.37385,3.3981],[50.37421,3.39993],[50.37412,3.40076],[50.37329,3.40219],[50.37279,3.40427],[50.37167,3.40712],[50.37016,3.40918],[50.36951,3.41053],[50.36841,3.41203],[50.36741,3.41268],[50.36698,3.41296],[50.36621,3.41508],[50.36551,3.41976],[50.36633,3.42189],[50.36686,3.42322],[50.36728,3.42577],[50.36799,3.42815],[50.3682,3.42863],[50.37066,3.42973],[50.37157,3.43029],[50.37219,3.43052],[50.37411,3.43064],[50.37465,3.43055],[50.3759,3.43003],[50.37755,3.42965],[50.37816,3.43092],[50.37837,3.43118],[50.37976,3.43099],[50.38166,3.43083],[50.38399,3.42841],[50.38519,3.42717],[50.38488,3.42646],[50.38754,3.42363],[50.38785,3.42438],[50.38899,3.42323],[50.40547,3.40618],[50.40528,3.40535],[50.38795,3.39661],[50.3851,3.39521],[50.38374,3.39461],[50.38092,3.39394],[50.37904,3.39344],[50.3776,3.39202],[50.37984,3.38739],[50.3825,3.3822],[50.38316,3.38137],[50.38418,3.38098],[50.38467,3.37962],[50.38653,3.37528],[50.3896,3.37256],[50.38239,3.36504],[50.37925,3.36272],[50.378,3.36226],[50.37554,3.36009],[50.37446,3.35999],[50.37335,3.35864],[50.37408,3.35672],[50.37432,3.3548],[50.37497,3.35418],[50.37472,3.34907],[50.37405,3.34881],[50.37267,3.34809],[50.37157,3.34651],[50.37034,3.34309],[50.37009,3.34213],[50.37134,3.33775],[50.37146,3.33648],[50.37217,3.336],[50.37205,3.33479],[50.37104,3.33324],[50.37012,3.32992],[50.37013,3.32762],[50.37035,3.32525],[50.37012,3.3211],[50.36976,3.32022],[50.36917,3.31871],[50.36852,3.31828],[50.36821,3.31706],[50.37287,3.31458],[50.3733,3.31463],[50.37717,3.31752],[50.37926,3.31708],[50.38331,3.31649],[50.38574,3.31607],[50.38766,3.31678],[50.39022,3.31652],[50.39385,3.31635],[50.39439,3.31795],[50.39401,3.32134],[50.39356,3.3234],[50.39376,3.32559],[50.39448,3.32807],[50.39628,3.32957],[50.39694,3.33129],[50.39848,3.33131],[50.40108,3.33226],[50.40235,3.332],[50.40346,3.33161],[50.40473,3.33313],[50.40567,3.33386],[50.4073,3.33387],[50.40845,3.33305],[50.40875,3.33216],[50.4096,3.33175],[50.40965,3.33078],[50.40973,3.32934],[50.41032,3.32394],[50.41069,3.32257],[50.41142,3.3216],[50.41195,3.32132],[50.41363,3.31776],[50.41388,3.31655],[50.4143,3.31625],[50.41598,3.31626],[50.41784,3.31743],[50.42046,3.31973],[50.42235,3.32143],[50.42399,3.3216],[50.42542,3.32259],[50.42613,3.32277],[50.42808,3.32562],[50.42894,3.32575],[50.42925,3.32558],[50.42987,3.325],[50.43041,3.32476],[50.43132,3.32544],[50.43163,3.32471],[50.43134,3.31947],[50.43185,3.31737],[50.43474,3.31655],[50.4353,3.31817],[50.4443,3.31742],[50.4452,3.3167],[50.4457,3.31972],[50.44618,3.32112],[50.44701,3.32175],[50.44849,3.32351],[50.44944,3.32407],[50.45049,3.32517],[50.45312,3.31514],[50.45494,3.30653],[50.45744,3.29769],[50.45749,3.29568],[50.45835,3.29005],[50.45862,3.28893],[50.4592,3.2866],[50.45952,3.28518],[50.45975,3.28324],[50.46016,3.28169],[50.45946,3.27981],[50.45873,3.27732],[50.45891,3.27106],[50.45942,3.26862],[50.46054,3.26533],[50.46181,3.26211],[50.46411,3.2591],[50.46495,3.25831],[50.46619,3.25804],[50.46744,3.25481],[50.46793,3.25328],[50.46935,3.25012],[50.47059,3.24836],[50.47121,3.24866],[50.47212,3.24815],[50.47388,3.24613],[50.47476,3.24546],[50.47522,3.24443],[50.47607,3.24309],[50.47726,3.24162],[50.47797,3.24094],[50.47817,3.24083],[50.4781,3.24051],[50.4775,3.2393],[50.47623,3.23673],[50.47584,3.23569],[50.47572,3.23551],[50.47444,3.23461],[50.47344,3.23346],[50.47319,3.23275],[50.4727,3.22932],[50.47261,3.22844],[50.47385,3.22379],[50.47467,3.22478],[50.47643,3.22679],[50.47685,3.22811],[50.47841,3.2311],[50.47928,3.23295],[50.47955,3.23478],[50.47987,3.23561],[50.48448,3.22726],[50.48628,3.22415],[50.4872,3.22198],[50.48773,3.22051],[50.48937,3.21714],[50.48945,3.21571],[50.48867,3.21223],[50.48846,3.21095],[50.48671,3.21051],[50.48569,3.21028],[50.48428,3.20982],[50.48204,3.20806],[50.48092,3.20648],[50.48001,3.20502],[50.47955,3.20472],[50.47976,3.20401],[50.48096,3.20166],[50.48152,3.19934],[50.48293,3.19622],[50.48226,3.19394],[50.48216,3.19222],[50.48253,3.19091],[50.48308,3.19],[50.48408,3.18679],[50.48471,3.18586],[50.48525,3.18604],[50.4872,3.18192],[50.48893,3.17562],[50.48841,3.16716],[50.48628,3.16093],[50.48381,3.15789],[50.48344,3.15791],[50.4825,3.15344],[50.48155,3.1491],[50.47996,3.14569],[50.48146,3.14269],[50.48234,3.1429],[50.4836,3.14279],[50.48617,3.13913],[50.48699,3.13659],[50.48829,3.13442],[50.48924,3.13352],[50.49207,3.13144],[50.4923,3.12885],[50.49185,3.12794],[50.49095,3.12737],[50.48913,3.12549],[50.48732,3.1232],[50.48799,3.12112],[50.48857,3.12092],[50.4904,3.11828],[50.49192,3.11728],[50.48858,3.10833],[50.48706,3.10368],[50.49042,3.10253],[50.49186,3.10262],[50.4953,3.1042],[50.49643,3.10501],[50.50024,3.10754],[50.50235,3.10784],[50.50468,3.10928],[50.50647,3.10807],[50.50724,3.10668],[50.50924,3.10599],[50.51069,3.10576],[50.51135,3.10566],[50.51496,3.10224],[50.51578,3.10207],[50.51745,3.10148],[50.51824,3.10376],[50.5192,3.10684],[50.52,3.10784],[50.5215,3.10704],[50.52252,3.1067],[50.52287,3.10765],[50.52324,3.1093],[50.52364,3.11016],[50.52426,3.11206],[50.52497,3.11148],[50.52798,3.10821],[50.52951,3.10711],[50.53009,3.10697],[50.53026,3.1066],[50.53148,3.10586],[50.53418,3.10711],[50.53428,3.10791],[50.53316,3.11139],[50.53493,3.1162],[50.53569,3.11944],[50.5362,3.12202],[50.53641,3.12319],[50.53725,3.12512],[50.53797,3.12594],[50.53901,3.12724],[50.53948,3.12746],[50.53985,3.12883],[50.53962,3.13084],[50.54025,3.13289],[50.54095,3.13446],[50.54286,3.1362],[50.54314,3.13891],[50.54232,3.1431],[50.54235,3.14548],[50.54252,3.14632],[50.54235,3.14725],[50.54233,3.14922],[50.54272,3.151],[50.54231,3.15222],[50.54162,3.15408],[50.54036,3.15653],[50.53948,3.16036],[50.53882,3.16173],[50.53725,3.16357],[50.53682,3.16371],[50.5367,3.16386],[50.53574,3.16745],[50.53552,3.16933],[50.53561,3.17025],[50.536,3.17237],[50.53519,3.17484],[50.53583,3.17612],[50.53722,3.17749],[50.53879,3.17803],[50.54082,3.17952],[50.54132,3.18177],[50.54148,3.18297],[50.5433,3.18522],[50.54151,3.18865],[50.54367,3.1901],[50.54542,3.18997],[50.5474,3.19052],[50.54978,3.19192],[50.55193,3.19241],[50.5535,3.19181],[50.55627,3.19225],[50.55845,3.19347],[50.55988,3.19315],[50.56082,3.19311],[50.56203,3.19344],[50.56371,3.19474],[50.56508,3.19747],[50.56627,3.19863],[50.56662,3.19995],[50.56624,3.2067],[50.56583,3.2093],[50.5657,3.21204],[50.56589,3.21397],[50.56701,3.21464],[50.56784,3.21627],[50.56834,3.21907],[50.56869,3.22006],[50.5695,3.22279],[50.57004,3.22353],[50.57044,3.22596],[50.57077,3.23297],[50.56988,3.23633],[50.56742,3.23769],[50.56537,3.23914],[50.56375,3.24068],[50.56565,3.24364],[50.56695,3.24351],[50.57028,3.24233],[50.57166,3.24198],[50.57253,3.2426],[50.57302,3.24414],[50.57108,3.25097],[50.57106,3.25162],[50.56997,3.25523],[50.56917,3.25899],[50.56802,3.26306],[50.56757,3.26511],[50.56835,3.26568],[50.56942,3.26569],[50.56952,3.26717],[50.56962,3.26785],[50.57063,3.26831],[50.57118,3.26875],[50.57228,3.269],[50.57393,3.26894],[50.57516,3.2699],[50.5769,3.27071],[50.57815,3.27117],[50.57972,3.27148],[50.58048,3.27124],[50.58342,3.27213],[50.58552,3.2676],[50.58543,3.26568],[50.58439,3.26138],[50.58409,3.25749],[50.58708,3.25635],[50.58959,3.2551],[50.59068,3.25541],[50.5915,3.256],[50.593,3.25496],[50.59371,3.2545],[50.59361,3.25314],[50.59449,3.25288],[50.59465,3.25162],[50.5945,3.25101],[50.59421,3.2491],[50.5942,3.24859],[50.59425,3.24711],[50.59438,3.24666],[50.59387,3.24445],[50.59422,3.2438],[50.59512,3.24266],[50.59556,3.24023],[50.59666,3.23626],[50.59403,3.2333],[50.59119,3.23107],[50.5891,3.22904],[50.59058,3.22892],[50.59118,3.22801],[50.59163,3.2263],[50.59265,3.21752],[50.5943,3.21295],[50.59583,3.21111],[50.59656,3.2069],[50.59738,3.2048],[50.59941,3.20525],[50.60095,3.20614],[50.60377,3.20687],[50.60533,3.20709],[50.60544,3.2073],[50.60719,3.2076],[50.61014,3.20911],[50.6107,3.20912],[50.61258,3.20784],[50.61347,3.20922],[50.61466,3.21028],[50.61522,3.21022],[50.61638,3.21092],[50.61712,3.2116],[50.61751,3.21149],[50.61849,3.2127],[50.62164,3.21519],[50.62428,3.21669],[50.62744,3.21897],[50.6283,3.22062],[50.62944,3.21955],[50.63002,3.21872],[50.63117,3.21836],[50.63191,3.21769],[50.63503,3.21551],[50.63558,3.21489],[50.63731,3.21248],[50.63774,3.21286],[50.63832,3.21146],[50.63835,3.21073],[50.63951,3.20877],[50.63962,3.20753],[50.64028,3.20616],[50.64067,3.20627],[50.6422,3.20459],[50.64243,3.20429],[50.64362,3.20526],[50.64443,3.20325],[50.64533,3.20244],[50.64558,3.20177],[50.64554,3.19969],[50.64605,3.19675],[50.64598,3.19614],[50.64582,3.19516],[50.64641,3.19542],[50.64674,3.19566],[50.64737,3.1957],[50.64933,3.19731],[50.64945,3.19754],[50.64952,3.19732],[50.65137,3.19324],[50.65291,3.19088],[50.65381,3.19042],[50.65426,3.18939],[50.65664,3.18727],[50.66116,3.18392],[50.66353,3.18221],[50.66455,3.18212],[50.66547,3.18301],[50.66725,3.18455],[50.6684,3.1856],[50.66975,3.18705],[50.66987,3.1872],[50.67761,3.19922],[50.6785,3.20275],[50.6782,3.20342],[50.67853,3.2044],[50.67827,3.20484],[50.67748,3.20425],[50.67805,3.20633],[50.67861,3.20646],[50.67878,3.20583],[50.67776,3.20421],[50.67733,3.20444]];
-const TOTAL_POINTS = GPX_COORDS.length;
-
-// Load Leaflet and init map
-const leafletCSS = document.createElement('link');
-leafletCSS.rel = 'stylesheet';
-leafletCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
-document.head.appendChild(leafletCSS);
-
-const leafletJS = document.createElement('script');
-leafletJS.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-document.head.appendChild(leafletJS);
-
-leafletJS.onload = function() {
-  const map = L.map('route-map', {
-    center: [50.05, 3.05],
-    zoom: 9,
-    zoomControl: true,
-    attributionControl: true,
+  paveSectors.forEach(s => {
+    const si = Math.floor((s.start / TOTAL_KM) * (TOTAL_POINTS - 1));
+    const ei = Math.floor((s.end / TOTAL_KM) * (TOTAL_POINTS - 1));
+    if (si >= 0 && ei < TOTAL_POINTS && ei > si) L.polyline(GPX_COORDS.slice(si, ei + 1), { color: 'rgba(212,98,42,0.85)', weight: 6 }).addTo(window.raceMap);
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 17,
-  }).addTo(map);
+  KEY_POINTS.forEach(kp => {
+    const idx = Math.min(Math.floor((kp.km / TOTAL_KM) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+    const icon = L.divIcon({ html: `<div class="map-key-marker" style="background:${kp.type==='start'?'#5a8a4a':(kp.type==='finish'?'#f0834a':'#d4622a')}"></div>`, className: '', iconSize: [10,10], iconAnchor: [5,5] });
+    L.marker(GPX_COORDS[idx], { icon }).addTo(window.raceMap).bindTooltip(kp.name, { className: 'leaflet-tooltip', direction: 'top' });
+  });
 
-  // Draw route polyline
-  const routeLine = L.polyline(GPX_COORDS, {
-    color: 'rgba(122,179,200,0.7)',
-    weight: 3,
-    opacity: 1,
-  }).addTo(map);
+  const riderIcon = L.divIcon({ html: '<div class="map-rider-dot" id="map-rider-inner"></div>', className: '', iconSize: [14,14], iconAnchor: [7,7] });
+  const riderMarker = L.marker(GPX_COORDS[0], { icon: riderIcon, zIndexOffset: 1000, draggable: true }).addTo(window.raceMap);
 
-  // Draw pave sectors in orange
-  const paveSectorCoords = [
-    { start: 95.8/258.3,  end: 98.0/258.3  },
-    { start: 102.3/258.3, end: 104.1/258.3 },
-    { start: 104.9/258.3, end: 108.6/258.3 },
-    { start: 111.1/258.3, end: 114.1/258.3 },
-    { start: 114.9/258.3, end: 115.7/258.3 },
-    { start: 123.7/258.3, end: 124.5/258.3 },
-    { start: 130.5/258.3, end: 131.7/258.3 },
-    { start: 134.9/258.3, end: 136.4/258.3 },
-    { start: 137.5/258.3, end: 140.0/258.3 },
-    { start: 140.7/258.3, end: 142.3/258.3 },
-    { start: 153.6/258.3, end: 156.1/258.3 },
-    { start: 163.0/258.3, end: 165.4/258.3 },
-    { start: 169.1/258.3, end: 170.7/258.3 },
-    { start: 175.9/258.3, end: 179.6/258.3 },
-    { start: 183.3/258.3, end: 185.8/258.3 },
-    { start: 186.8/258.3, end: 189.2/258.3 },
-    { start: 193.2/258.3, end: 194.5/258.3 },
-    { start: 198.2/258.3, end: 199.9/258.3 },
-    { start: 204.3/258.3, end: 206.9/258.3 },
-    { start: 209.7/258.3, end: 212.7/258.3 },
-    { start: 215.7/258.3, end: 216.4/258.3 },
-    { start: 219.1/258.3, end: 220.5/258.3 },
-    { start: 224.5/258.3, end: 225.6/258.3 },
-    { start: 231.5/258.3, end: 232.9/258.3 },
-    { start: 234.0/258.3, end: 235.1/258.3 },
-    { start: 238.4/258.3, end: 240.2/258.3 },
-    { start: 241.2/258.3, end: 243.3/258.3 },
-    { start: 243.5/258.3, end: 244.5/258.3 },
-    { start: 250.2/258.3, end: 251.6/258.3 },
-    { start: 256.9/258.3, end: 257.2/258.3 },
-  ];
-
-  paveSectorCoords.forEach(s => {
-    const si = Math.floor(s.start * (TOTAL_POINTS - 1));
-    const ei = Math.floor(s.end * (TOTAL_POINTS - 1));
-    const seg = GPX_COORDS.slice(si, ei + 1);
-    if (seg.length > 1) {
-      L.polyline(seg, { color: 'rgba(212,98,42,0.85)', weight: 4 }).addTo(map);
+  let mapDragging = false;
+  riderMarker.on('dragstart', () => mapDragging = true);
+  riderMarker.on('drag', e => {
+    let bestIdx = 0, minDist = Infinity;
+    for (let i = 0; i < TOTAL_POINTS; i++) {
+      const d = Math.pow(GPX_COORDS[i][0] - e.latlng.lat, 2) + Math.pow(GPX_COORDS[i][1] - e.latlng.lng, 2);
+      if (d < minDist) { minDist = d; bestIdx = i; }
     }
+    setSlider((bestIdx / (TOTAL_POINTS - 1)) * TOTAL_KM);
   });
+  riderMarker.on('dragend', () => { mapDragging = false; riderMarker.setLatLng(GPX_COORDS[Math.floor((currentKm/TOTAL_KM)*(TOTAL_POINTS-1))]); });
 
-  // Key point markers
-  const keyMarkers = [
-    { name: 'Compiègne', lat: 49.4185, lon: 2.8232, color: '#5a8a4a', km: 0 },
-    { name: "Trouée d'Arenberg", lat: 50.3130, lon: 3.4599, color: '#d4622a', km: 163 },
-    { name: 'Mons-en-Pévèle', lat: 50.4097, lon: 3.3274, color: '#d4622a', km: 209.7 },
-    { name: "Carrefour de l'Arbre", lat: 50.5073, lon: 3.1873, color: '#d4622a', km: 241.2 },
-    { name: 'Roubaix', lat: 50.6944, lon: 3.1707, color: '#f0834a', km: 258.3 },
-  ];
-
-  keyMarkers.forEach(km => {
-    const icon = L.divIcon({
-      html: `<div class="map-key-marker" style="background:${km.color}"></div>`,
-      className: '',
-      iconSize: [10,10],
-      iconAnchor: [5,5],
-    });
-    L.marker([km.lat, km.lon], { icon })
-      .addTo(map)
-      .bindTooltip(km.name, { className: 'leaflet-tooltip', permanent: false, direction: 'top' });
-  });
-
-  // Rider position dot
-  const riderIcon = L.divIcon({
-    html: '<div class="map-rider-dot" id="map-rider-inner"></div>',
-    className: '',
-    iconSize: [14,14],
-    iconAnchor: [7,7],
-  });
-  const riderMarker = L.marker(GPX_COORDS[0], { icon: riderIcon, zIndexOffset: 1000 }).addTo(map);
-
-  // Update rider on slider change
   window.updateMapRider = function(km, inPave) {
-    const frac = km / 258.3;
-    const idx = Math.min(Math.floor(frac * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
-    const pos = GPX_COORDS[idx];
-    riderMarker.setLatLng(pos);
+    const idx = Math.min(Math.floor((km / TOTAL_KM) * (TOTAL_POINTS - 1)), TOTAL_POINTS - 1);
+    if (!mapDragging) {
+      riderMarker.setLatLng(GPX_COORDS[idx]);
+      window.raceMap.panTo(GPX_COORDS[idx], { animate: true, duration: 0.1 });
+    }
     const inner = document.getElementById('map-rider-inner');
-    if (inner) {
-      if (inPave) inner.classList.add('in-pave');
-      else inner.classList.remove('in-pave');
-    }
-    // Pan map to keep rider visible if out of view
-    if (!map.getBounds().contains(pos)) {
-      map.panTo(pos, { animate: true, duration: 0.5 });
-    }
+    if (inner) inPave ? inner.classList.add('in-pave') : inner.classList.remove('in-pave');
   };
-};
+}
 
+// 🚀 START ENGINE
+loadExternalData();
 </script>
 </body>
 </html>
