@@ -300,6 +300,7 @@ document.getElementById('footer-year').textContent = new Date().getFullYear();
 document.getElementById('header-date-label').textContent += ` · ${NEXT_RACE.getFullYear()}`;
 
 // ===================== DATA FETCHING =====================
+// ===================== DATA FETCHING =====================
 async function loadExternalData() {
   try {
     // 1. Fetch JSON Timetable
@@ -307,8 +308,21 @@ async function loadExternalData() {
     if (!timeRes.ok) throw new Error("Could not load timetable.json");
     const timeData = await timeRes.json();
     
+    // סורק מראש כמה סקטורים ייחודיים יש, ומזהה כפילויות לטובת a,b,c
+    const sectorCounts = {};
+    timeData.forEach(row => {
+      const pRaw = row["Pave Sectour"] || row["Pave Sector"];
+      if (pRaw && pRaw.toString().trim() !== "") {
+        const num = parseInt(pRaw);
+        sectorCounts[num] = (sectorCounts[num] || 0) + 1;
+      }
+    });
+    
+    // הכמות האמיתית של סקטורים (30) ללא כפילויות
+    const totalUniqueSectors = Object.keys(sectorCounts).length; 
+    const currentSectorIndex = {};
+    
     let activeSector = null;
-    let sectorCount = 0;
 
     timeData.forEach(row => {
       const km = parseFloat(row["From the start"]);
@@ -327,9 +341,17 @@ async function loadExternalData() {
         const num = parseInt(pRaw);
         const stars = parseInt(row["Stars"] || row["stars"]) || 3;
         const lenStr = row["Length"] || row["length"] || "N/A";
-        paveObj = { num, stars, name: row["Place"], len: lenStr };
-        activeSector = { num, start: km, end: null };
-        sectorCount++;
+        
+        // יצירת מספר תצוגה: אם יש כפילות, הופך ל-8a, 8b וכו'
+        currentSectorIndex[num] = (currentSectorIndex[num] || 0) + 1;
+        let displayNum = num.toString();
+        if (sectorCounts[num] > 1) {
+            const letters = ['a', 'b', 'c', 'd', 'e'];
+            displayNum += letters[currentSectorIndex[num] - 1];
+        }
+
+        paveObj = { num, displayNum, stars, name: row["Place"], len: lenStr };
+        activeSector = { num, displayNum, start: km, end: null };
       }
       
       waypoints.push({ km: km, place: row["Place"], time: row["45km/h"] || row["47km/h"] || "12:00", pave: paveObj });
@@ -360,18 +382,18 @@ async function loadExternalData() {
         KEY_POINTS.push({
           name: ts.isStart ? "Compiègne" : (ts.isFinish ? "Roubaix" : wp.pave.name),
           type: ts.type, km: wp.km, icon: ts.icon, stars: wp.pave ? wp.pave.stars : 0,
-          sub: ts.isStart || ts.isFinish ? ts.sub : `Sector ${wp.pave.num} · ${wp.pave.len}`
+          sub: ts.isStart || ts.isFinish ? ts.sub : `Sector ${wp.pave.displayNum} · ${wp.pave.len}`
         });
       }
     });
 
-    // Update Header Meta
+    // מעדכן את המספרים בראש האתר למספר הסקטורים הייחודי!
     document.getElementById('header-stats-row').style.display = 'flex';
     document.getElementById('stat-start').textContent = `START ${waypoints[0].time}`;
     document.getElementById('stat-km').textContent = `${TOTAL_KM.toFixed(1)} KM`;
-    document.getElementById('stat-sectors').textContent = `${sectorCount} SECTORS`;
-    document.getElementById('header-subtitle').textContent = `L'Enfer du Nord · Weather Tracker · ${TOTAL_KM.toFixed(1)} km · ${sectorCount} Pavé Sectors`;
-    document.getElementById('sectors-title').textContent = `All ${sectorCount} Pavé Sectors`;
+    document.getElementById('stat-sectors').textContent = `${totalUniqueSectors} SECTORS`;
+    document.getElementById('header-subtitle').textContent = `L'Enfer du Nord · Weather Tracker · ${TOTAL_KM.toFixed(1)} km · ${totalUniqueSectors} Pavé Sectors`;
+    document.getElementById('sectors-title').textContent = `All ${totalUniqueSectors} Pavé Sectors`;
 
     // 2. Fetch GeoJSON Map
     const geoRes = await fetch('route.geojson');
@@ -381,7 +403,7 @@ async function loadExternalData() {
     if (geoData.features && geoData.features.length > 0) rawCoords = geoData.features[0].geometry.coordinates;
     else if (geoData.geometry) rawCoords = geoData.geometry.coordinates;
     
-    GPX_COORDS = rawCoords.map(c => [c[1], c[0]]); // [lon, lat] -> [lat, lon]
+    GPX_COORDS = rawCoords.map(c => [c[1], c[0]]); 
     TOTAL_POINTS = GPX_COORDS.length;
 
     startApp();
@@ -419,7 +441,10 @@ function startApp() {
 function getNearestWaypoint(km) { return waypoints.reduce((prev, curr) => Math.abs(curr.km - km) < Math.abs(prev.km - km) ? curr : prev); }
 function getActivePave(km) {
   for (const s of paveSectors) {
-    if (km >= s.start && km <= s.end) { const wp = waypoints.find(w => w.pave && w.pave.num === s.num); return { ...s, stars: wp ? wp.pave.stars : 0, name: wp ? wp.pave.name : '' }; }
+    if (km >= s.start && km <= s.end) { 
+        const wp = waypoints.find(w => w.pave && w.pave.displayNum === s.displayNum); 
+        return { ...s, stars: wp ? wp.pave.stars : 0, name: wp ? wp.pave.name : '', displayNum: s.displayNum }; 
+    }
   }
   return null;
 }
@@ -445,7 +470,7 @@ function renderSectors() {
     const w = getWeatherForDisplay(wp.km);
     const row = document.createElement('div');
     row.className = 'sector-row';
-    row.innerHTML = `<div class="sector-num">${wp.pave.num}</div><div><div class="sector-name">${wp.pave.name}</div><div style="color:var(--yellow); font-size: 0.75rem; margin-top: 2px;">${'★'.repeat(wp.pave.stars)}</div><div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp}</div></div><div class="sector-km"><div>KM ${wp.km.toFixed(1)}</div><div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div></div>`;
+    row.innerHTML = `<div class="sector-num">${wp.pave.displayNum}</div><div><div class="sector-name">${wp.pave.name}</div><div style="color:var(--yellow); font-size: 0.75rem; margin-top: 2px;">${'★'.repeat(wp.pave.stars)}</div><div class="sector-weather-mini">${w.icon} ${w.main} · ${w.temp}</div></div><div class="sector-km"><div>KM ${wp.km.toFixed(1)}</div><div style="color:var(--pave);margin-top:2px">${wp.pave.len}</div></div>`;
     row.addEventListener('click', () => window.jumpToLocation(wp.km, 14));
     grid.appendChild(row);
   });
@@ -500,7 +525,7 @@ window.setSlider = function(km) {
   const thumb = document.getElementById('progress-thumb');
   const badge = document.getElementById('pave-badge');
   if (pave) {
-    badge.textContent = `Secteur ${pave.num} · ${'★'.repeat(pave.stars || 0)}`;
+    badge.textContent = `Secteur ${pave.displayNum} · ${'★'.repeat(pave.stars || 0)}`;
     badge.classList.add('visible'); thumb.classList.add('in-pave');
   } else {
     badge.classList.remove('visible'); thumb.classList.remove('in-pave');
@@ -640,7 +665,7 @@ function computeHellIndex(rw) {
 }
 
 function getMudCommentary(pave, rw) {
-  let txt = `<strong>Sector ${pave.num} (${pave.name})</strong>: `;
+  let txt = `<strong>Sector ${pave.displayNum} (${pave.name})</strong>: `;
   if (rw.precip > 2) txt += `Heavy rain (${rw.precip.toFixed(1)}mm) will make the ${pave.len} treacherous. `;
   else if (rw.precip > 0.1) txt += `Damp cobbles. Slipping risk high. `;
   else txt += `Dry line available. `;
